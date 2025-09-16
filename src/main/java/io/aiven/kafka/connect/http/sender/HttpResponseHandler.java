@@ -22,13 +22,51 @@ import java.net.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 interface HttpResponseHandler {
 
     Logger LOGGER = LoggerFactory.getLogger(HttpResponseHandler.class);
+    final ObjectMapper mapper = new ObjectMapper();
 
     void onResponse(final HttpResponse<String> response, int remainingRetries) throws IOException;
 
     HttpResponseHandler ON_HTTP_ERROR_RESPONSE_HANDLER = (response, remainingRetries) -> {
+        if (response.statusCode() == 200) {
+            boolean isError = false;
+            Object value = response.body();
+            if (value != null) {
+                try {
+                    JsonNode root = null;
+                    if (value instanceof String) {
+                        root = mapper.readTree((String) value);
+                    } else {
+                        // fallback: serialize value.toString()
+                        root = mapper.readTree(value.toString());
+                    }
+                    if (root.has("errors") &&
+                        root.get("errors").isArray() &&
+                        root.get("errors").size() > 0) {
+                        isError = true;
+                    }
+                } catch (IOException e) {
+                    // ignore parse errors, treat as non-error
+                }
+            }
+            if (isError) {
+                final var request = response.request();
+                final var uri = request != null ? request.uri() : "UNKNOWN";
+                LOGGER.warn(
+                            "Got 200 HTTP status code: {} with errors in body: {}. Requested URI: {}",
+                            response.statusCode(),
+                            response.body(),
+                            uri);
+                throw new IOException("Server replied with status code " + response.statusCode()
+                                      + " and body with errors " + response.body());
+            }
+        }
+
         if (response.statusCode() >= 400) {
             final var request = response.request();
             final var uri = request != null ? request.uri() : "UNKNOWN";
