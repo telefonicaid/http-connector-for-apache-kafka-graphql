@@ -65,9 +65,7 @@ interface HttpResponseHandler {
                 throw new IOException("Server replied with status code " + response.statusCode()
                                       + " and body with errors " + response.body());
             }
-        }
-
-        if (response.statusCode() >= 400) {
+        } else if (response.statusCode() >= 400) {
             final var request = response.request();
             final var uri = request != null ? request.uri() : "UNKNOWN";
             LOGGER.warn(
