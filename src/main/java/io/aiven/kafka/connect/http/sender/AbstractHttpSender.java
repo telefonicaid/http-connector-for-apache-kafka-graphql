@@ -89,7 +89,7 @@ abstract class AbstractHttpSender {
                 throw new ConnectException(e);
             }
         }
-        if (msgError != null) {
+        if (msgError == null) {
             msgError = "Sending failed and no retries remain, stopping";
         }
         log.error(msgError);
