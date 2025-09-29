@@ -64,8 +64,10 @@ abstract class AbstractHttpSender {
             final int retries
     ) {
         int remainingRetries = retries;
+        String msgError = null;
         while (remainingRetries >= 0) {
             try {
+                msgError = null;
                 try {
                     final var response =
                             httpClient.send(requestBuilderWithPayload.build(), HttpResponse.BodyHandlers.ofString());
@@ -74,18 +76,24 @@ abstract class AbstractHttpSender {
                     httpResponseHandler.onResponse(response, remainingRetries);
                     return response;
                 } catch (final IOException e) {
-                    log.info("Sending failed, will retry in {} ms ({} retries remain)", config.retryBackoffMs(),
-                            remainingRetries, e);
+                    log.info("Sending failed, will retry in {} ms ({} retries remain) by {}",
+                             config.retryBackoffMs(),
+                             remainingRetries,
+                             e);
                     remainingRetries -= 1;
                     TimeUnit.MILLISECONDS.sleep(config.retryBackoffMs());
+                    msgError = e.toString();
                 }
             } catch (final InterruptedException e) {
                 log.error("Sending failed due to InterruptedException, stopping", e);
                 throw new ConnectException(e);
             }
         }
-        log.error("Sending failed and no retries remain, stopping");
-        throw new ConnectException("Sending failed and no retries remain, stopping");
+        if (msgError == null) {
+            msgError = "Sending failed and no retries remain, stopping";
+        }
+        log.error(msgError);
+        throw new ConnectException(msgError);
     }
 
 }
