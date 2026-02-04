@@ -614,7 +614,7 @@ public final class HttpSinkConfig extends AbstractConfig {
                         BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
                         BASIC_CLIENT_SCOPE_CONFIG, BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
         );
-        
+
         configDef.define(
                 BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
                 ConfigDef.Type.STRING,
@@ -642,7 +642,8 @@ public final class HttpSinkConfig extends AbstractConfig {
                     }
                 },
                 ConfigDef.Importance.MEDIUM,
-                "Specifies how to encode ``client_id``, ``client_secret``, ``username`` and ``password`` in the Basic authorization request. "
+                "Specifies how to encode ``client_id``, ``client_secret``, ``username`` and ``password`` "
+                        + "in the Basic authorization request. "
                         + "If set to ``header``, the credentials are encoded as an "
                         + "``Authorization: Basic <base-64 encoded client_id:client_secret>`` HTTP header. "
                         + "If set to ``url``, then ``client_id`` and ``client_secret`` "
@@ -652,7 +653,7 @@ public final class HttpSinkConfig extends AbstractConfig {
                 ConfigDef.Width.LONG,
                 BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
                 List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_CLIENT_ID_CONFIG, BASIC_CLIENT_SECRET_CONFIG,
-                        BASIC_USERNAME_CONF, BASIC_PASSWORD_CONF,
+                        BASIC_USERNAME_CONFIG, BASIC_PASSWORD_CONFIG,
                         BASIC_CLIENT_SCOPE_CONFIG, BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
         );
         configDef.define(
@@ -696,7 +697,6 @@ public final class HttpSinkConfig extends AbstractConfig {
                         BASIC_USERNAME_CONFIG, BASIC_PASSWORD_CONFIG,
                         BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG, BASIC_CLIENT_SCOPE_CONFIG)
         );
-        
     }
 
     private static void addBatchingConfigGroup(final ConfigDef configDef) {
@@ -903,8 +903,8 @@ public final class HttpSinkConfig extends AbstractConfig {
                 break;
             case OAUTH2: validateOAuth2Configuration();
                 break;
-            case BASIC: validateOBasicAuthConfiguration();
-                break;                
+            case BASIC: validateBasicAuthConfiguration();
+                break;
             case NONE:
                 if (headerAuthorization() != null && !headerAuthorization().isBlank()) {
                     throw new ConfigException(
@@ -1049,6 +1049,10 @@ public final class HttpSinkConfig extends AbstractConfig {
         return toURI(OAUTH2_ACCESS_TOKEN_URL_CONFIG);
     }
 
+    public final URI basicAuthAccessTokenUri() {
+        return toURI(BASIC_ACCESS_TOKEN_URL_CONFIG);
+    }
+
     private URI toURI(final String propertyName) {
         try {
             return new URL(getString(propertyName)).toURI();
@@ -1093,7 +1097,51 @@ public final class HttpSinkConfig extends AbstractConfig {
         return getString(OAUTH2_RESPONSE_TOKEN_PROPERTY_CONFIG);
     }
 
-    public final basicAuthAuthorizationMode basicAuthAuthorizationMode() {
+
+
+
+    
+    public final String basicAuthGrantTypeProperty() {
+        return getString(BASIC_GRANT_TYPE_PROP_CONFIG);
+    }
+
+    public final String basicAuthGrantType() {
+        return getString(BASIC_GRANT_TYPE_CONFIG);
+    }
+
+    public final String basicAuthClientIdProperty() {
+        return getString(BASIC_CLIENT_ID_PROP_CONFIG);
+    }
+
+    public final String basicAuthClientId() {
+        return getString(BASIC_CLIENT_ID_CONFIG);
+    }
+
+    public final String basicAuthClientSecretProperty() {
+        return getString(BASIC_CLIENT_SECRET_PROP_CONFIG);
+    }
+
+    public final Password basicAuthClientSecret() {
+        return getPassword(BASIC_CLIENT_SECRET_CONFIG);
+    }
+
+    public final String basicAuthUsernameProperty() {
+        return getString(BASIC_USERNAME_PROP_CONFIG);
+    }
+
+    public final String basicAuthUsername() {
+        return getString(BASIC_USERNAME_CONFIG);
+    }
+
+    public final String basicAuthPasswordProperty() {
+        return getString(BASIC_PASSWORD_PROP_CONFIG);
+    }
+
+    public final Password basicAuthPassword() {
+        return getPassword(BASIC_PASSWORD_CONFIG);
+    }
+
+    public final BasicAuthAuthorizationMode basicAuthAuthorizationMode() {
         return BasicAuthAuthorizationMode.valueOf(getString(BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG).toUpperCase());
     }
 

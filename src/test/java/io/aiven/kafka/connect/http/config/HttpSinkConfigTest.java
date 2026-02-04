@@ -281,7 +281,7 @@ final class HttpSinkConfigTest {
                 .describedAs("Expected config exception due to unsupported authorization type")
                 .isThrownBy(() -> new HttpSinkConfig(properties))
                 .withMessage("Invalid value unsupported for configuration http.authorization.type: "
-                        + "supported values are: [none, oauth2, static]");
+                        + "supported values are: [none, basic, oauth2, static]");
     }
 
     @Test

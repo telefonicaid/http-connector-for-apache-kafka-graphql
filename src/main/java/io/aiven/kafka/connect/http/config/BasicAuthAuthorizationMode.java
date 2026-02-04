@@ -25,7 +25,7 @@ public enum BasicAuthAuthorizationMode {
     HEADER,
     URL;
 
-    static final List<String> BASIC_AUTH_AUTHORIZATION_MODES =
+    static final List<String> BASIC_AUTHORIZATION_MODES =
             Arrays.stream(BasicAuthAuthorizationMode.values())
                     .map(BasicAuthAuthorizationMode::name)
                     .collect(Collectors.toUnmodifiableList());
