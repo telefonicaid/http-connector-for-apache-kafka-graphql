@@ -21,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.StringJoiner;
 
+
+
 public class BasicAuthAccessTokenRequestForm {
 
     private static final String SCOPE = "scope";
@@ -42,29 +44,28 @@ public class BasicAuthAccessTokenRequestForm {
     private final String password;
 
     private BasicAuthAccessTokenRequestForm(
-        final String grantTypeProperty,
-        final String grantType,
+        final PropertyValue grantType,
         final String scope,
-        final String clientIdProperty,
-        final String clientId,
-        final String clientSecretProperty,
-        final String clientSecret,
-        final String usernameProperty,
-        final String username,
-        final String passwordProperty,
-        final String password
+        final PropertyValue clientId,
+        final PropertyValue clientSecret,
+        final PropertyValue username,
+        final PropertyValue password
     ) {
-        this.grantTypeProperty = grantTypeProperty;
-        this.grantType = grantType;
+        this.grantTypeProperty = grantType.property();
+        this.grantType = grantType.value();
         this.scope = scope;
-        this.clientIdProperty = clientIdProperty;
-        this.clientId = clientId;
-        this.clientSecretProperty = clientSecretProperty;
-        this.clientSecret = clientSecret;
-        this.usernameProperty = usernameProperty;
-        this.username = username;
-        this.passwordProperty = passwordProperty;
-        this.password = password;
+
+        this.clientIdProperty = clientId.property();
+        this.clientId = clientId.value();
+
+        this.clientSecretProperty = clientSecret.property();
+        this.clientSecret = clientSecret.value();
+
+        this.usernameProperty = username.property();
+        this.username = username.value();
+
+        this.passwordProperty = password.property();
+        this.password = password.value();
     }
 
     public String toBodyString() {
@@ -200,11 +201,13 @@ public class BasicAuthAccessTokenRequestForm {
             }
 
             return new BasicAuthAccessTokenRequestForm(
-                                                       grantTypeProperty, grantType, scope,
-                                                       clientIdProperty, clientId,
-                                                       clientSecretProperty, clientSecret,
-                                                       usernameProperty, username,
-                                                       passwordProperty, password);
+                                                       new PropertyValue(grantTypeProperty, grantType),
+                                                       scope,
+                                                       new PropertyValue(clientIdProperty, clientId),
+                                                       new PropertyValue(clientSecretProperty, clientSecret),
+                                                       new PropertyValue(usernameProperty, username),
+                                                       new PropertyValue(passwordProperty, password)
+                                                       );
         }
 
     }

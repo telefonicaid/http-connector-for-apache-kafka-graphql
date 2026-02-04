@@ -70,7 +70,7 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
 
         private final HttpSinkConfig config;
         private final BasicAuthAccessTokenHttpSender basicAuthAccessTokenHttpSender;
-
+        private static final String ACCESS_TOKEN_FIELD = "access_token";
         private String accessToken;
 
         BasicAuthHttpRequestBuilder(
@@ -126,13 +126,13 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
         private String buildAccessTokenAuthHeader(final String basicAuthResponseBody) throws JsonProcessingException {
             final var accessTokenResponse =
                 OBJECT_MAPPER.readValue(basicAuthResponseBody, new TypeReference<Map<String, String>>() {});
-            if (!accessTokenResponse.containsKey(config.basicAuthResponseTokenProperty())) {
+            if (!accessTokenResponse.containsKey(ACCESS_TOKEN_FIELD)) {
                 throw new ConnectException("Couldn't find access token property "
-                                           + config.basicAuthResponseTokenProperty()
+                                           + ACCESS_TOKEN_FIELD
                                            + " in response properties: " + accessTokenResponse.keySet());
             }
             final var tokenType = accessTokenResponse.getOrDefault("token_type", "Bearer");
-            final var accessToken = accessTokenResponse.get(config.basicAuthResponseTokenProperty());
+            final var accessToken = accessTokenResponse.get(ACCESS_TOKEN_FIELD);
             return String.format("%s %s", tokenType, accessToken);
         }
 

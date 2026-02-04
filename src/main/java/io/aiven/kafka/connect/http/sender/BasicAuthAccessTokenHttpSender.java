@@ -19,18 +19,16 @@ package io.aiven.kafka.connect.http.sender;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Base64;
 import java.util.Objects;
 
-import io.aiven.kafka.connect.http.config.BasicAuthAuthorizationMode;
 import io.aiven.kafka.connect.http.config.HttpSinkConfig;
 import io.aiven.kafka.connect.http.sender.request.BasicAuthAccessTokenRequestForm;
 
-import static io.aiven.kafka.connect.http.config.BasicAuthAuthorizationMode.HEADER;
-
 class BasicAuthAccessTokenHttpSender extends AbstractHttpSender implements HttpSender {
+
+    private static final String GRANT_TYPE_PROPERTY = "grant_type";
+    private static final String GRANT_TYPE = "password";
 
     BasicAuthAccessTokenHttpSender(final HttpSinkConfig config, final HttpClient httpClient) {
         super(config, new AccessTokenHttpRequestBuilder(), httpClient);
@@ -39,25 +37,27 @@ class BasicAuthAccessTokenHttpSender extends AbstractHttpSender implements HttpS
     HttpResponse<String> call() {
         final BasicAuthAccessTokenRequestForm.Builder formBuilder = BasicAuthAccessTokenRequestForm
             .newBuilder()
-            .withGrantTypeProperty(config.oauth2GrantTypeProperty())
-            .withGrantType(config.oauth2GrantType())
-            .withScope(config.oauth2ClientScope());
+            .withGrantTypeProperty(GRANT_TYPE_PROPERTY)
+            .withGrantType(GRANT_TYPE)
+            .withScope(config.basicAuthClientScope());
 
-        if (config.basicAuthAuthorizationMode() == BasicAuthAuthorizationMode.URL) {
+        formBuilder
+            .withClientIdProperty(config.basicAuthClientIdProperty())
+            .withClientId(config.basicAuthClientId())
+            .withUsernameProperty(config.basicAuthUsernameProperty())
+            .withUsername(config.basicAuthUsername())
+            .withPasswordProperty(config.basicAuthPasswordProperty())
+            .withPassword(config
+                          .basicAuthPassword()
+                          .value());
+
+        final var secret = config.basicAuthClientSecret();
+        if (secret != null && secret.value() != null && !secret.value().isBlank()) {
             formBuilder
-                .withClientIdProperty(config.basicAuthClientIdProperty())
-                .withClientId(config.basicAuthClientId())
                 .withClientSecretProperty(config.basicAuthClientSecretProperty())
-                .withClientSecret(config
-                    .basicAuthClientSecret()
-                    .value())
-                .withUsernameProperty(config.basicAuthUsernameProperty())
-                .withUsername(config.basicAuthUsername())
-                .withPasswordProperty(config.basicAuthPasswordProperty())
-                .withPassword(config
-                    .basicAuthPassword()
-                    .value());
+                .withClientSecret(secret.value());
         }
+
         return super.send(formBuilder
             .build()
             .toBodyString());
@@ -73,25 +73,10 @@ class BasicAuthAccessTokenHttpSender extends AbstractHttpSender implements HttpS
         @Override
         public HttpRequest.Builder build(final HttpSinkConfig config) {
             final var builder = HttpRequest
-                .newBuilder(Objects.requireNonNull(config.oauth2AccessTokenUri()))
+                .newBuilder(Objects.requireNonNull(config.basicAuthAccessTokenUri()))
                 .timeout(Duration.ofSeconds(config.httpTimeout()))
                 .header(HEADER_CONTENT_TYPE, HEADER_CONTENT_TYPE_FORM);
-            if (config.basicAuthAuthorizationMode() == HEADER) {
-                addClientIdAndSecretInRequestHeader(config, builder);
-            }
             return builder;
-        }
-
-        private void addClientIdAndSecretInRequestHeader(
-            final HttpSinkConfig config, final HttpRequest.Builder builder
-        ) {
-            final var clientAndSecretBytes = (config.oauth2ClientId() + ":" + config
-                .oauth2ClientSecret()
-                .value()).getBytes(StandardCharsets.UTF_8);
-            final var clientAndSecretAuthHeader = "Basic " + Base64
-                .getEncoder()
-                .encodeToString(clientAndSecretBytes);
-            builder.header(HEADER_AUTHORIZATION, clientAndSecretAuthHeader);
         }
 
     }
