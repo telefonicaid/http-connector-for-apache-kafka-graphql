@@ -50,14 +50,19 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
         final HttpResponseHandler originHandler,
         final int retries
     ) {
-        final HttpResponseHandler composed = (response, remainingRetries) -> {
-            if ((response.statusCode() == 401 || response.statusCode() == 403) && remainingRetries > 0) {
+        final HttpResponseHandler composedHandler = (response, remainingRetries) -> {
+            final int status = response.statusCode();
+
+            // If we got Unauthorized (or Forbidden) and we still have retries left,
+            // renew the access token and force AbstractHttpSender to retry by throwing IOException.
+            if ((status == 401 || status == 403) && remainingRetries > 0) {
                 ((BasicAuthHttpRequestBuilder) this.httpRequestBuilder).renewAccessToken(requestBuilder);
-                throw new IOException("401 Unauthorized, renewing access token and retrying");
+                throw new IOException(status + " received: renewed access token, retrying");
             }
+            // Keep existing logic (GraphQL 200 with errors[], >=400, etc.)
             originHandler.onResponse(response, remainingRetries);
         };
-        return super.sendWithRetries(requestBuilder, composed, retries);
+        return super.sendWithRetries(requestBuilder, composedHandler, retries);
     }
 
     private static class BasicAuthHttpRequestBuilder extends DefaultHttpRequestBuilder {
