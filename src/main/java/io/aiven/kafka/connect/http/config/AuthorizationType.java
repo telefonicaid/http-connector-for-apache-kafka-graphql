@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 public enum AuthorizationType {
     NONE("none"),
+    BASIC("basic"),
     OAUTH2("oauth2"),
     STATIC("static");
 
@@ -37,6 +38,8 @@ public enum AuthorizationType {
 
         if (NONE.name.equalsIgnoreCase(name)) {
             return NONE;
+        } else if (BASIC.name.equalsIgnoreCase(name)) {
+            return BASIC;
         } else if (OAUTH2.name.equalsIgnoreCase(name)) {
             return OAUTH2;
         } else if (STATIC.name.equalsIgnoreCase(name)) {

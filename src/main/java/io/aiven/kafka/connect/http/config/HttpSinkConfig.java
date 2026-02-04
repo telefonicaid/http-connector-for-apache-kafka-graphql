@@ -64,6 +64,21 @@ public final class HttpSinkConfig extends AbstractConfig {
     private static final String OAUTH2_CLIENT_SCOPE_CONFIG = "oauth2.client.scope";
     private static final String OAUTH2_RESPONSE_TOKEN_PROPERTY_CONFIG = "oauth2.response.token.property";
 
+    private static final String BASIC_ACCESS_TOKEN_URL_CONFIG = "basic.access.token.url";
+    private static final String BASIC_GRANT_TYPE_PROP_CONFIG = "basic.request.grant.type.property";
+    private static final String BASIC_GRANT_TYPE_CONFIG = "basic.grant.type";
+    private static final String BASIC_CLIENT_ID_PROP_CONFIG = "basic.request.client.id.property";
+    private static final String BASIC_CLIENT_ID_CONFIG = "basic.client.id";
+    private static final String BASIC_CLIENT_SECRET_PROP_CONFIG = "basic.request.client.secret.property";
+    private static final String BASIC_CLIENT_SECRET_CONFIG = "basic.client.secret";
+    private static final String BASIC_USERNAME_PROP_CONFIG = "basic.request.username.property";
+    private static final String BASIC_USERNAME_CONFIG = "basic.username";
+    private static final String BASIC_PASSWORD_PROP_CONFIG = "basic.request.password.property";
+    private static final String BASIC_PASSWORD_CONFIG = "basic.password";
+    private static final String BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG = "basic.client.authorization.mode";
+    private static final String BASIC_CLIENT_SCOPE_CONFIG = "basic.client.scope";
+    private static final String BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG = "basic.response.token.property";
+
     private static final String BATCHING_GROUP = "Batching";
     private static final String BATCHING_ENABLED_CONFIG = "batching.enabled";
     private static final String BATCH_MAX_SIZE_CONFIG = "batch.max.size";
@@ -424,6 +439,264 @@ public final class HttpSinkConfig extends AbstractConfig {
                 List.of(OAUTH2_ACCESS_TOKEN_URL_CONFIG, OAUTH2_CLIENT_ID_CONFIG, OAUTH2_CLIENT_SECRET_CONFIG,
                         OAUTH2_CLIENT_AUTHORIZATION_MODE_CONFIG, OAUTH2_CLIENT_SCOPE_CONFIG)
         );
+
+
+        configDef.define(
+                BASIC_ACCESS_TOKEN_URL_CONFIG,
+                ConfigDef.Type.STRING,
+                null,
+                new UrlValidator(true),
+                ConfigDef.Importance.HIGH,
+                "The URL to be used for fetching an access token. "
+                        + "Client Credentials is the only supported grant type.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_ACCESS_TOKEN_URL_CONFIG,
+                List.of(BASIC_GRANT_TYPE_PROP_CONFIG, BASIC_GRANT_TYPE_CONFIG, BASIC_CLIENT_ID_PROP_CONFIG,
+                        BASIC_CLIENT_ID_CONFIG, BASIC_CLIENT_SECRET_PROP_CONFIG, BASIC_CLIENT_SECRET_CONFIG,
+                        BASIC_USERNAME_PROP_CONFIG,
+                        BASIC_USERNAME_CONFIG, BASIC_PASSWORD_PROP_CONFIG, BASIC_PASSWORD_CONFIG,
+                        BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG, BASIC_CLIENT_SCOPE_CONFIG,
+                        BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
+        );
+        configDef.define(BASIC_GRANT_TYPE_PROP_CONFIG,
+                ConfigDef.Type.STRING,
+                "grant_type",
+                new ConfigDef.NonEmptyStringWithoutControlChars() {
+                    @Override
+                    public String toString() {
+                        return "Basic Auth grant type key";
+                    }
+                },
+                ConfigDef.Importance.HIGH,
+                "The grant type Key used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG, BASIC_GRANT_TYPE_PROP_CONFIG,
+                List.of(BASIC_GRANT_TYPE_CONFIG)
+        );
+        configDef.define(
+                BASIC_GRANT_TYPE_CONFIG,
+                ConfigDef.Type.STRING,
+                "client_credentials",
+                new ConfigDef.NonEmptyStringWithoutControlChars() {
+                    @Override
+                    public String toString() {
+                        return "Basic Auth grant type";
+                    }
+                },
+                ConfigDef.Importance.HIGH,
+                "The grant type used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_GRANT_TYPE_CONFIG
+        );
+        configDef.define(BASIC_CLIENT_ID_PROP_CONFIG,
+                ConfigDef.Type.STRING,
+                "client_id",
+                new ConfigDef.NonEmptyStringWithoutControlChars() {
+                    @Override
+                    public String toString() {
+                        return "Basic Auth client id Key";
+                    }
+                },
+                ConfigDef.Importance.HIGH,
+                "The client id Key used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG, BASIC_CLIENT_ID_PROP_CONFIG,
+                List.of(BASIC_CLIENT_ID_CONFIG)
+        );
+        configDef.define(
+                BASIC_CLIENT_ID_CONFIG,
+                ConfigDef.Type.STRING,
+                null,
+                new ConfigDef.NonEmptyStringWithoutControlChars() {
+                    @Override
+                    public String toString() {
+                        return "Basic Auth client id";
+                    }
+                },
+                ConfigDef.Importance.HIGH,
+                "The client id used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_CLIENT_ID_CONFIG,
+                List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_CLIENT_SECRET_CONFIG,
+                        BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
+                        BASIC_CLIENT_SCOPE_CONFIG, BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
+        );
+        configDef.define(BASIC_CLIENT_SECRET_PROP_CONFIG,
+                Type.STRING,
+                "client_secret",
+                ConfigDef.Importance.HIGH,
+                "The secret Key used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG, BASIC_CLIENT_SECRET_PROP_CONFIG,
+                List.of(BASIC_CLIENT_SECRET_CONFIG)
+        );
+        configDef.define(
+                BASIC_CLIENT_SECRET_CONFIG,
+                ConfigDef.Type.PASSWORD,
+                null,
+                ConfigDef.Importance.HIGH,
+                "The secret used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_CLIENT_SECRET_CONFIG,
+                List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_CLIENT_ID_CONFIG,
+                        BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
+                        BASIC_CLIENT_SCOPE_CONFIG, BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
+        );
+
+        configDef.define(BASIC_USERNAME_PROP_CONFIG,
+                ConfigDef.Type.STRING,
+                "username",
+                new ConfigDef.NonEmptyStringWithoutControlChars() {
+                    @Override
+                    public String toString() {
+                        return "Basic Auth username Key";
+                    }
+                },
+                ConfigDef.Importance.HIGH,
+                "The username Key used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG, BASIC_USERNAME_PROP_CONFIG,
+                List.of(BASIC_USERNAME_CONFIG)
+        );
+        configDef.define(
+                BASIC_USERNAME_CONFIG,
+                ConfigDef.Type.STRING,
+                null,
+                new ConfigDef.NonEmptyStringWithoutControlChars() {
+                    @Override
+                    public String toString() {
+                        return "Basic Auth client id";
+                    }
+                },
+                ConfigDef.Importance.HIGH,
+                "The username used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_USERNAME_CONFIG,
+                List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_PASSWORD_CONFIG,
+                        BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
+                        BASIC_CLIENT_SCOPE_CONFIG, BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
+        );
+        configDef.define(BASIC_PASSWORD_PROP_CONFIG,
+                Type.STRING,
+                "password",
+                ConfigDef.Importance.HIGH,
+                "The password used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG, BASIC_PASSWORD_PROP_CONFIG,
+                List.of(BASIC_PASSWORD_CONFIG)
+        );
+        configDef.define(
+                BASIC_PASSWORD_CONFIG,
+                ConfigDef.Type.PASSWORD,
+                null,
+                ConfigDef.Importance.HIGH,
+                "The password used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_PASSWORD_CONFIG,
+                List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_USERNAME_CONFIG,
+                        BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
+                        BASIC_CLIENT_SCOPE_CONFIG, BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
+        );
+        
+        configDef.define(
+                BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
+                ConfigDef.Type.STRING,
+                BasicAuthAuthorizationMode.HEADER.name(),
+                new ConfigDef.Validator() {
+                    @Override
+                    public void ensureValid(final String name, final Object value) {
+                        if (value == null) {
+                            throw new ConfigException(name, null, "can't be null");
+                        }
+                        if (!(value instanceof String)) {
+                            throw new ConfigException(name, value, "must be string");
+                        }
+                        if (!BasicAuthAuthorizationMode.BASIC_AUTHORIZATION_MODES
+                                .contains(value.toString().toUpperCase())) {
+                            throw new ConfigException(
+                                    BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG, value,
+                                    "supported values are: " + BasicAuthAuthorizationMode.BASIC_AUTHORIZATION_MODES);
+                        }
+                    }
+
+                    @Override
+                    public String toString() {
+                        return String.join(",", BasicAuthAuthorizationMode.BASIC_AUTHORIZATION_MODES);
+                    }
+                },
+                ConfigDef.Importance.MEDIUM,
+                "Specifies how to encode ``client_id``, ``client_secret``, ``username`` and ``password`` in the Basic authorization request. "
+                        + "If set to ``header``, the credentials are encoded as an "
+                        + "``Authorization: Basic <base-64 encoded client_id:client_secret>`` HTTP header. "
+                        + "If set to ``url``, then ``client_id`` and ``client_secret`` "
+                        + "are sent as URL encoded parameters. Default is ``header``.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG,
+                List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_CLIENT_ID_CONFIG, BASIC_CLIENT_SECRET_CONFIG,
+                        BASIC_USERNAME_CONF, BASIC_PASSWORD_CONF,
+                        BASIC_CLIENT_SCOPE_CONFIG, BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
+        );
+        configDef.define(
+                BASIC_CLIENT_SCOPE_CONFIG,
+                ConfigDef.Type.STRING,
+                null,
+                new ConfigDef.NonEmptyStringWithoutControlChars() {
+                    @Override
+                    public String toString() {
+                        return "Basic Auth client scope";
+                    }
+                },
+                ConfigDef.Importance.LOW,
+                "The scope used for fetching an access token.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_CLIENT_SCOPE_CONFIG,
+                List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_CLIENT_ID_CONFIG, BASIC_CLIENT_SECRET_CONFIG,
+                        BASIC_USERNAME_CONFIG, BASIC_PASSWORD_CONFIG,
+                        BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG, BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG)
+        );
+        configDef.define(
+                BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG,
+                ConfigDef.Type.STRING,
+                "access_token",
+                new ConfigDef.NonEmptyStringWithoutControlChars() {
+                    @Override
+                    public String toString() {
+                        return "Basic Auth response token";
+                    }
+                },
+                ConfigDef.Importance.LOW,
+                "The name of the JSON property containing the access token returned "
+                        + "by the Basic Auth provider. Default value is ``access_token``.",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG,
+                List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_CLIENT_ID_CONFIG, BASIC_CLIENT_SECRET_CONFIG,
+                        BASIC_USERNAME_CONFIG, BASIC_PASSWORD_CONFIG,
+                        BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG, BASIC_CLIENT_SCOPE_CONFIG)
+        );
+        
     }
 
     private static void addBatchingConfigGroup(final ConfigDef configDef) {
@@ -630,6 +903,8 @@ public final class HttpSinkConfig extends AbstractConfig {
                 break;
             case OAUTH2: validateOAuth2Configuration();
                 break;
+            case BASIC: validateOBasicAuthConfiguration();
+                break;                
             case NONE:
                 if (headerAuthorization() != null && !headerAuthorization().isBlank()) {
                     throw new ConfigException(
@@ -671,6 +946,29 @@ public final class HttpSinkConfig extends AbstractConfig {
                     "Must be present when " + HTTP_HEADERS_AUTHORIZATION_CONFIG + " = " + AuthorizationType.OAUTH2);
         }
     }
+
+    private void validateBasicAuthConfiguration() {
+        Stream.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_GRANT_TYPE_PROP_CONFIG, BASIC_GRANT_TYPE_CONFIG,
+                  BASIC_CLIENT_ID_PROP_CONFIG, BASIC_CLIENT_ID_CONFIG, BASIC_CLIENT_SECRET_PROP_CONFIG,
+                  BASIC_USERNAME_PROP_CONFIG, BASIC_USERNAME_CONFIG, BASIC_PASSWORD_PROP_CONFIG)
+              .filter(configKey -> getString(configKey) == null || getString(configKey).isBlank())
+              .findFirst()
+              .ifPresent(missingConfiguration -> {
+                  throw new ConfigException(missingConfiguration, getString(missingConfiguration),
+                          "Must be present when " + HTTP_HEADERS_AUTHORIZATION_CONFIG + " = "
+                          +
+                          AuthorizationType.BASIC);
+              });
+
+        if (basicAuthClientSecret() == null || basicAuthClientSecret().value().isEmpty()) {
+            throw new ConfigException(BASIC_CLIENT_SECRET_CONFIG, basicAuthClientSecret(),
+                    "Must be present when " + HTTP_HEADERS_AUTHORIZATION_CONFIG + " = " + AuthorizationType.BASIC);
+        }
+        if (basicAuthPassword() == null || basicAuthPassword().value().isEmpty()) {
+            throw new ConfigException(BASIC_PASSWORD_CONFIG, basicAuthPassword(),
+                    "Must be present when " + HTTP_HEADERS_AUTHORIZATION_CONFIG + " = " + AuthorizationType.BASIC);
+        }        
+    }    
 
     public final URI httpUri() {
         return toURI(HTTP_URL_CONFIG);
@@ -793,6 +1091,18 @@ public final class HttpSinkConfig extends AbstractConfig {
 
     public final String oauth2ResponseTokenProperty() {
         return getString(OAUTH2_RESPONSE_TOKEN_PROPERTY_CONFIG);
+    }
+
+    public final basicAuthAuthorizationMode basicAuthAuthorizationMode() {
+        return BasicAuthAuthorizationMode.valueOf(getString(BASIC_CLIENT_AUTHORIZATION_MODE_CONFIG).toUpperCase());
+    }
+
+    public final String basicAuthClientScope() {
+        return getString(BASIC_CLIENT_SCOPE_CONFIG);
+    }
+
+    public final String basicAuthResponseTokenProperty() {
+        return getString(BASIC_RESPONSE_TOKEN_PROPERTY_CONFIG);
     }
 
     public final boolean hasProxy() {
