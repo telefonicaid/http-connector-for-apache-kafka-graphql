@@ -46,21 +46,18 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
 
     @Override
     protected HttpResponse<String> sendWithRetries(
-        final Builder requestBuilder, final HttpResponseHandler originHttpResponseHandler, final int retries
+        final Builder requestBuilder,
+        final HttpResponseHandler originHandler,
+        final int retries
     ) {
-        // This handler allows to request a new access token if a 401 occurs, meaning the session might be expired
-        final HttpResponseHandler handler = (response, remainingRetries) -> {
-            // If the response has a 401 error and we have retries left, we attempt to renew the session
-            if (response.statusCode() == 401 && remainingRetries > 0) {
-                // Update the request builder with the new access token
+        final HttpResponseHandler composed = (response, remainingRetries) -> {
+            if ((response.statusCode() == 401 || response.statusCode() == 403) && remainingRetries > 0) {
                 ((BasicAuthHttpRequestBuilder) this.httpRequestBuilder).renewAccessToken(requestBuilder);
-                // Retry the call and decrease the retries counter to avoid looping on token renewal
-                this.sendWithRetries(requestBuilder, originHttpResponseHandler, remainingRetries - 1);
-            } else {
-                originHttpResponseHandler.onResponse(response, remainingRetries);
+                throw new IOException("401 Unauthorized, renewing access token and retrying");
             }
+            originHandler.onResponse(response, remainingRetries);
         };
-        return super.sendWithRetries(requestBuilder, handler, retries);
+        return super.sendWithRetries(requestBuilder, composed, retries);
     }
 
     private static class BasicAuthHttpRequestBuilder extends DefaultHttpRequestBuilder {
@@ -80,7 +77,6 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
             this.config = config;
             this.basicAuthAccessTokenHttpSender = basicAuthAccessTokenHttpSender;
         }
-
         
         @Override
         public Builder build(final HttpSinkConfig config) {
