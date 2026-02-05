@@ -54,7 +54,8 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
     ) {
         final HttpResponseHandler composedHandler = (response, remainingRetries) -> {
             final int status = response.statusCode();
-            LOGGER.info("response status{}", status);
+            LOGGER.info("Server replied with status code {} and body {}",
+                       status, response.body());
 
             // If we got Unauthorized (or Forbidden) and we still have retries left,
             // renew the access token and force AbstractHttpSender to retry by throwing IOException.
