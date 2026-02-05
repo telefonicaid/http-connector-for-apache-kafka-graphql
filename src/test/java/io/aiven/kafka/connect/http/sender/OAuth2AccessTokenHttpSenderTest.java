@@ -242,7 +242,7 @@ public class OAuth2AccessTokenHttpSenderTest extends HttpSenderTestBase {
                 messages.forEach(httpSender::send);
 
             })
-            .withMessage("Sending failed and no retries remain, stopping");
+            .withMessageContaining("status code 500");
     }
 
     private Map<String, String> defaultConfig() {

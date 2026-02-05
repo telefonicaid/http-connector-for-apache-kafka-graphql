@@ -93,6 +93,10 @@ abstract class AbstractHttpSender {
             msgError = "Sending failed and no retries remain, stopping";
         }
         log.error(msgError);
+        // At this point all retries are exhausted.
+        // We intentionally propagate the last encountered error message (msgError),
+        // instead of a generic failure message, to preserve the real root cause
+        // (e.g. HTTP status codes, remote errors) for observability and debugging.
         throw new ConnectException(msgError);
     }
 

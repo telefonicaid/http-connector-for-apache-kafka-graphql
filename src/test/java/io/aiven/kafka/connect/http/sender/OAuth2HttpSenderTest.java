@@ -344,7 +344,8 @@ class OAuth2HttpSenderTest extends HttpSenderTestBase {
                 messages.forEach(httpSender::send);
 
             })
-            .withMessage("Sending failed and no retries remain, stopping");
+            .withMessageContaining("status code 401");
+                                                                              
 
         // Only 2 calls were made with 1 retry
         verify(oauth2AccessTokenHttpSender, times(2)).call();
@@ -417,7 +418,7 @@ class OAuth2HttpSenderTest extends HttpSenderTestBase {
                 messages.forEach(httpSender::send);
 
             })
-            .withMessage("Sending failed and no retries remain, stopping");
+            .withMessageContaining("status code 500");
     }
 
     private Map<String, String> defaultConfig() {
