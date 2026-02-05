@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory;
 
 class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(BasicAuthHttpSender.class);
+
     BasicAuthHttpSender(
         final HttpSinkConfig config,
         final HttpClient client,
@@ -52,6 +54,7 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
     ) {
         final HttpResponseHandler composedHandler = (response, remainingRetries) -> {
             final int status = response.statusCode();
+            LOGGER.info("response status{}", status);
 
             // If we got Unauthorized (or Forbidden) and we still have retries left,
             // renew the access token and force AbstractHttpSender to retry by throwing IOException.
@@ -73,7 +76,8 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
         private final HttpSinkConfig config;
         private final BasicAuthAccessTokenHttpSender basicAuthAccessTokenHttpSender;
         private static final String ACCESS_TOKEN_FIELD = "access_token";
-        private String accessToken;
+        private volatile String accessToken;
+        private final Object tokenLock = new Object();
 
         BasicAuthHttpRequestBuilder(
             final HttpSinkConfig config,
@@ -97,31 +101,47 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
          * @param requestBuilder the request builder used to call the protected URI
          */
         void renewAccessToken(final HttpRequest.Builder requestBuilder) {
-            this.accessToken = null;
+            synchronized (tokenLock) {
+                this.accessToken = null;
+            }
+            LOGGER.info("renewAccessToken using BasicAuth for URI: {} and Client ID: {}",
+                        config.basicAuthAccessTokenUri(),
+                        config.basicAuthClientId());
             requestBuilder.setHeader(HttpRequestBuilder.HEADER_AUTHORIZATION, this.requestAccessToken());
         }
-        
+
         /**
          * Retrieves the current access token or requests it if none is defined
          *
          * @return an access token
          */
         private String requestAccessToken() {
-            // Re-use the access token if it's already defined
-            if (this.accessToken != null) {
-                return this.accessToken;
-            }
-            LOGGER.info("Configure BasicAuth for URI: {} and Client ID: {}", config.basicAuthAccessTokenUri(),
+            LOGGER.info("requestAccessToken using BasicAuth for URI: {} and Client ID: {}",
+                        config.basicAuthAccessTokenUri(),
                         config.basicAuthClientId());
-            try {
-                // Whenever the access token is null (not initialized yet or expired), call the AccessTokenHttpSender
-                // implementation to request one
-                final var response = basicAuthAccessTokenHttpSender.call();
-                accessToken = buildAccessTokenAuthHeader(response.body());
-            } catch (final IOException e) {
-                throw new ConnectException("Couldn't get BasicAuth access token", e);
+            String token = this.accessToken;
+            if (token != null) {
+                return token;
             }
-            return accessToken;
+
+            synchronized (tokenLock) {
+                token = this.accessToken;
+                if (token != null) {
+                    return token;
+                }
+                LOGGER.info("Requesting BasicAuth token from URI: {} for clientId: {}",
+                             config.basicAuthAccessTokenUri(), config.basicAuthClientId());
+                try {
+                    // Whenever the access token is null (not initialized yet or expired),
+                    // call the AccessTokenHttpSender implementation to request one
+                    final var response = basicAuthAccessTokenHttpSender.call();
+                    token = buildAccessTokenAuthHeader(response.body());
+                    this.accessToken = token;
+                    return token;
+                } catch (final IOException e) {
+                    throw new ConnectException("Couldn't get BasicAuth access token", e);
+                }
+            }
         }
 
         private String buildAccessTokenAuthHeader(final String basicAuthResponseBody) throws JsonProcessingException {
