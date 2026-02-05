@@ -43,6 +43,10 @@ public final class HttpSenderFactory {
                 return new DefaultHttpSender(config, client);
             case STATIC:
                 return new StaticAuthHttpSender(config, client);
+            case BASIC:
+                final BasicAuthAccessTokenHttpSender basicAccessTokenHttpSender =
+                    new BasicAuthAccessTokenHttpSender(config, client);
+                return new BasicAuthHttpSender(config, client, basicAccessTokenHttpSender);
             case OAUTH2:
                 final OAuth2AccessTokenHttpSender oauth2AccessTokenHttpSender =
                     new OAuth2AccessTokenHttpSender(config, client);
