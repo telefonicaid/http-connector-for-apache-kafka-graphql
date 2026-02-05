@@ -128,6 +128,95 @@ Connection
   * Importance: low
   * Dependents: ``oauth2.access.token.url``, ``oauth2.client.id``, ``oauth2.client.secret``, ``oauth2.client.authorization.mode``, ``oauth2.client.scope``
 
+
+Basic Authentication
+^^^^^^^^^^^^^^^^^^^^
+
+``basic.access.token.url``
+  The URL to be used for fetching an access token. Client Credentials is the only supported grant type.
+
+  * Type: string
+  * Default: null
+  * Valid Values: HTTP(S) URL
+  * Importance: high
+  * Dependents: ``basic.request.client.id.property``, ``basic.client.id``, ``basic.request.client.secret.property``, ``basic.client.secret``, ``basic.request.username.property``, ``basic.username``, ``basic.request.password.property``, ``basic.password``, ``basic.client.scope``
+
+``basic.request.client.id.property``
+  The client id Key used for fetching an access token.
+
+  * Type: string
+  * Default: "client_id"
+  * Importance: high
+  * Dependents: ``basic.client.id``
+
+``basic.client.id``
+  The client id used for fetching an access token.
+
+  * Type: string
+  * Default: null
+  * Valid Values: Basic Auth client id
+  * Importance: high
+  * Dependents: ``basic.access.token.url``, ``basic.client.secret``, ``basic.client.scope``
+
+``basic.request.client.secret.property``
+  The client secret Key used for fetching an access token.
+
+  * Type: string
+  * Default: "client_secret"
+  * Importance: high
+  * Dependents: ``basic.client.secret``
+
+``basic.client.secret``
+  The secret used for fetching an access token.
+
+  * Type: password
+  * Default: null
+  * Importance: high
+  * Dependents: ``basic.access.token.url``, ``basic.client.id``, ``basic.client.scope``
+
+``basic.request.username.property``
+  The username Key used for fetching an access token.
+
+  * Type: string
+  * Default: "username"
+  * Importance: high
+  * Dependents: ``basic.username``
+
+``basic.username``
+  The username used for fetching an access token.
+
+  * Type: string
+  * Default: null
+  * Valid Values: Basic Auth username
+  * Importance: high
+  * Dependents: ``basic.access.token.url``, ``basic.password``, ``basic.client.scope``
+
+``basic.request.password.property``
+  The password Key used for fetching an access token.
+
+  * Type: string
+  * Default: "password"
+  * Importance: high
+  * Dependents: ``basic.password``
+
+``basic.password``
+  The password used for fetching an access token.
+
+  * Type: password
+  * Default: null
+  * Importance: high
+  * Dependents: ``basic.access.token.url``, ``basic.username``, ``basic.client.scope``
+
+``basic.client.scope``
+  The scope used for fetching an access token.
+
+  * Type: string
+  * Default: null
+  * Valid Values: Basic Auth client scope
+  * Importance: low
+  * Dependents: ``basic.access.token.url``, ``basic.client.id``, ``basic.client.secret``, ``basic.username``, ``basic.password``
+
+
 Batching
 ^^^^^^^^
 
