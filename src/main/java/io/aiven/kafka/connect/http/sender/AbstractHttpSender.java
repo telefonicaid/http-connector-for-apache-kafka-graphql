@@ -71,12 +71,12 @@ abstract class AbstractHttpSender {
                 try {
                     final var response =
                             httpClient.send(requestBuilderWithPayload.build(), HttpResponse.BodyHandlers.ofString());
-                    log.info("Server replied with status code {} and body {}", response.statusCode(), response.body());
+                    log.debug("Server replied with status code {} and body {}", response.statusCode(), response.body());
                     // Handle the response
                     httpResponseHandler.onResponse(response, remainingRetries);
                     return response;
                 } catch (final IOException e) {
-                    log.info("Sending failed, will retry in {} ms ({} retries remain) by {}",
+                    log.debug("Sending failed, will retry in {} ms ({} retries remain) by {}",
                              config.retryBackoffMs(),
                              remainingRetries,
                              e);

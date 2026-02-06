@@ -33,6 +33,7 @@ interface HttpResponseHandler {
 
     HttpResponseHandler ON_HTTP_ERROR_RESPONSE_HANDLER = (response, remainingRetries) -> {
         if (response.statusCode() == 200) {
+            // GraphQL logic: response 200 with errors[] are like 400
             boolean isError = false;
             final Object value = response.body();
             if (value != null) {

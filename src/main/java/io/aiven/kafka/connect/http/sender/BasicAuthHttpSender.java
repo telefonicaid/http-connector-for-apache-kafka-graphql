@@ -117,17 +117,15 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
          * @return an access token
          */
         private String requestAccessToken() {
-            LOGGER.info("requestAccessToken using BasicAuth for URI: {} and Client ID: {}",
-                        config.basicAuthAccessTokenUri(),
-                        config.basicAuthClientId());
             String token = this.accessToken;
             if (token != null) {
+                LOGGER.debug("requestAccessToken using current token");
                 return token;
             }
-
             synchronized (tokenLock) {
                 token = this.accessToken;
                 if (token != null) {
+                    LOGGER.debug("requestAccessToken using current token");
                     return token;
                 }
                 LOGGER.info("Requesting BasicAuth token from URI: {} for clientId: {}",
