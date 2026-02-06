@@ -758,7 +758,7 @@ public final class HttpSinkConfig extends AbstractConfig {
             ERRORS_GROUP,
             groupCounter++,
             ConfigDef.Width.SHORT,
-            HTTP_TIMEOUT_CONFIG
+            ERRORS_TOLERANCE
         );
     }
 
