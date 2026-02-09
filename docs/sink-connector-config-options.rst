@@ -304,6 +304,14 @@ Errors Handling
   * Default: null
   * Importance: low
 
+
+``http.graphql.errors.as.http_error``
+  If true, treat HTTP 200 responses containing a non-empty GraphQL 'errors' array as failures.
+  * Type: boolean
+  * Default: true
+  * Importance: low
+
+
 Formatting
 ^^^^^^^^^^^^^^^
 
