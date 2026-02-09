@@ -49,7 +49,7 @@ class OAuth2HttpSender extends AbstractHttpSender implements HttpSender {
         final Builder requestBuilder, final HttpResponseHandler originHttpResponseHandler, final int retries
     ) {
         // This handler allows to request a new access token if a 401 occurs, meaning the session might be expired
-        final HttpResponseHandler handler = (response, remainingRetries) -> {
+        final HttpResponseHandler handler = (response, remainingRetries, config) -> {
             // If the response has a 401 error and we have retries left, we attempt to renew the session
             if (response.statusCode() == 401 && remainingRetries > 0) {
                 // Update the request builder with the new access token
@@ -57,7 +57,7 @@ class OAuth2HttpSender extends AbstractHttpSender implements HttpSender {
                 // Retry the call and decrease the retries counter to avoid looping on token renewal
                 this.sendWithRetries(requestBuilder, originHttpResponseHandler, remainingRetries - 1);
             } else {
-                originHttpResponseHandler.onResponse(response, remainingRetries);
+                originHttpResponseHandler.onResponse(response, remainingRetries, config);
             }
         };
         return super.sendWithRetries(requestBuilder, handler, retries);

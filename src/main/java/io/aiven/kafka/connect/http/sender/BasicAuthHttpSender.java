@@ -52,7 +52,7 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
         final HttpResponseHandler originHandler,
         final int retries
     ) {
-        final HttpResponseHandler composedHandler = (response, remainingRetries) -> {
+        final HttpResponseHandler composedHandler = (response, remainingRetries, config) -> {
             final int status = response.statusCode();
             LOGGER.info("Server replied with status code {} and body {}",
                        status, response.body());
@@ -64,7 +64,7 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
                 throw new IOException(status + " received: renewed access token, retrying");
             }
             // Keep existing logic (GraphQL 200 with errors[], >=400, etc.)
-            originHandler.onResponse(response, remainingRetries);
+            originHandler.onResponse(response, remainingRetries, config);
         };
         return super.sendWithRetries(requestBuilder, composedHandler, retries);
     }

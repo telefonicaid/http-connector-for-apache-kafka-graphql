@@ -19,6 +19,8 @@ package io.aiven.kafka.connect.http.sender;
 import java.io.IOException;
 import java.net.http.HttpResponse;
 
+import io.aiven.kafka.connect.http.config.HttpSinkConfig;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -29,10 +31,12 @@ interface HttpResponseHandler {
     Logger LOGGER = LoggerFactory.getLogger(HttpResponseHandler.class);
     final ObjectMapper MAPPER = new ObjectMapper();
 
-    void onResponse(final HttpResponse<String> response, int remainingRetries) throws IOException;
+    void onResponse(final HttpResponse<String> response,
+                    int remainingRetries,
+                    HttpSinkConfig config) throws IOException;
 
-    HttpResponseHandler ON_HTTP_ERROR_RESPONSE_HANDLER = (response, remainingRetries) -> {
-        if (response.statusCode() == 200) {
+    HttpResponseHandler ON_HTTP_ERROR_RESPONSE_HANDLER = (response, remainingRetries, config) -> {
+        if (config.graphqlErrorsAsHttpError() && response.statusCode() == 200) {
             // GraphQL logic: response 200 with errors[] are like 400
             boolean isError = false;
             final Object value = response.body();

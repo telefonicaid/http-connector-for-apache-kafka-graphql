@@ -92,6 +92,8 @@ public final class HttpSinkConfig extends AbstractConfig {
     private static final String TIMEOUT_GROUP = "Timeout";
     private static final String HTTP_TIMEOUT_CONFIG = "http.timeout";
 
+    private static final String HTTP_GRAPHQL_ERRORS_AS_HTTP_ERROR_CONFIG = "http.graphql.errors.as.http_error";
+
     private static final String FORMATING_GROUP = "Format";
     private static final String AVRO_DECIMAL_FORMAT_CONFIG = "decimal.format";
 
@@ -245,6 +247,18 @@ public final class HttpSinkConfig extends AbstractConfig {
                 groupCounter++,
                 ConfigDef.Width.MEDIUM,
                 HTTP_HEADERS_ADDITIONAL
+        );
+
+        configDef.define(
+                HTTP_GRAPHQL_ERRORS_AS_HTTP_ERROR_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                true,
+                ConfigDef.Importance.LOW,
+                "If true, treat HTTP 200 responses containing a non-empty GraphQL 'errors' array as failures.",
+                ERRORS_GROUP,
+                groupCounter++,
+                ConfigDef.Width.SHORT,
+                HTTP_GRAPHQL_ERRORS_AS_HTTP_ERROR_CONFIG
         );
 
         configDef.define(
@@ -934,6 +948,10 @@ public final class HttpSinkConfig extends AbstractConfig {
 
     public int httpTimeout() {
         return getInt(HTTP_TIMEOUT_CONFIG);
+    }
+
+    public final boolean graphqlErrorsAsHttpError() {
+        return getBoolean(HTTP_GRAPHQL_ERRORS_AS_HTTP_ERROR_CONFIG);
     }
 
     public final String connectorName() {

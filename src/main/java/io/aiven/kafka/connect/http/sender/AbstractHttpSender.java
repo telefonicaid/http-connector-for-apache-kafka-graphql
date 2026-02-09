@@ -73,7 +73,7 @@ abstract class AbstractHttpSender {
                             httpClient.send(requestBuilderWithPayload.build(), HttpResponse.BodyHandlers.ofString());
                     log.debug("Server replied with status code {} and body {}", response.statusCode(), response.body());
                     // Handle the response
-                    httpResponseHandler.onResponse(response, remainingRetries);
+                    httpResponseHandler.onResponse(response, remainingRetries, config);
                     return response;
                 } catch (final IOException e) {
                     log.debug("Sending failed, will retry in {} ms ({} retries remain) by {}",
