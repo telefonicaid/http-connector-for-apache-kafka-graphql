@@ -19,35 +19,39 @@ package io.aiven.kafka.connect.http.sender;
 import java.io.IOException;
 import java.net.http.HttpResponse;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.aiven.kafka.connect.http.config.HttpSinkConfig;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 interface HttpResponseHandler {
 
     Logger LOGGER = LoggerFactory.getLogger(HttpResponseHandler.class);
-    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper MAPPER = new ObjectMapper();
 
-    void onResponse(final HttpResponse<String> response, int remainingRetries) throws IOException;
+    void onResponse(final HttpResponse<String> response,
+                    int remainingRetries,
+                    HttpSinkConfig config) throws IOException;
 
-    HttpResponseHandler ON_HTTP_ERROR_RESPONSE_HANDLER = (response, remainingRetries) -> {
-        if (response.statusCode() == 200) {
+    HttpResponseHandler ON_HTTP_ERROR_RESPONSE_HANDLER = (response, remainingRetries, config) -> {
+        if (config.graphqlErrorsAsHttpError() && response.statusCode() == 200) {
+            // GraphQL logic: response 200 with errors[] are like 400
             boolean isError = false;
-            Object value = response.body();
+            final Object value = response.body();
             if (value != null) {
                 try {
                     JsonNode root = null;
                     if (value instanceof String) {
-                        root = mapper.readTree((String) value);
+                        root = MAPPER.readTree((String) value);
                     } else {
                         // fallback: serialize value.toString()
-                        root = mapper.readTree(value.toString());
+                        root = MAPPER.readTree(value.toString());
                     }
-                    if (root.has("errors") &&
-                        root.get("errors").isArray() &&
-                        root.get("errors").size() > 0) {
+                    if (root.has("errors")
+                        && root.get("errors").isArray()
+                        && root.get("errors").size() > 0) {
                         isError = true;
                     }
                 } catch (IOException e) {

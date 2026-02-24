@@ -73,10 +73,10 @@ abstract class AbstractHttpSender {
                             httpClient.send(requestBuilderWithPayload.build(), HttpResponse.BodyHandlers.ofString());
                     log.debug("Server replied with status code {} and body {}", response.statusCode(), response.body());
                     // Handle the response
-                    httpResponseHandler.onResponse(response, remainingRetries);
+                    httpResponseHandler.onResponse(response, remainingRetries, config);
                     return response;
                 } catch (final IOException e) {
-                    log.info("Sending failed, will retry in {} ms ({} retries remain) by {}",
+                    log.debug("Sending failed, will retry in {} ms ({} retries remain) by {}",
                              config.retryBackoffMs(),
                              remainingRetries,
                              e);
@@ -93,6 +93,10 @@ abstract class AbstractHttpSender {
             msgError = "Sending failed and no retries remain, stopping";
         }
         log.error(msgError);
+        // At this point all retries are exhausted.
+        // We intentionally propagate the last encountered error message (msgError),
+        // instead of a generic failure message, to preserve the real root cause
+        // (e.g. HTTP status codes, remote errors) for observability and debugging.
         throw new ConnectException(msgError);
     }
 
