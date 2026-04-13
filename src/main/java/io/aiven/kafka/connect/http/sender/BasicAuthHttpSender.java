@@ -22,6 +22,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
 import java.util.Map;
+import java.util.Locale;
 
 import org.apache.kafka.connect.errors.ConnectException;
 
@@ -30,6 +31,7 @@ import io.aiven.kafka.connect.http.sender.DefaultHttpSender.DefaultHttpRequestBu
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,7 @@ import org.slf4j.LoggerFactory;
 class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BasicAuthHttpSender.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     BasicAuthHttpSender(
         final HttpSinkConfig config,
@@ -46,27 +49,60 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
         super(config, new BasicAuthHttpRequestBuilder(config, basicAuthAccessTokenHttpSender), client);
     }
 
+    private boolean isGraphQlExpiredTokenResponse(final HttpResponse<String> response) {
+        if (response.statusCode() != 200 || !config.graphqlErrorsAsHttpError()) {
+            return false;
+        }
+        final String body = response.body();
+        if (body == null || body.isBlank()) {
+            return false;
+        }
+        try {
+            final JsonNode root = OBJECT_MAPPER.readTree(body);
+            final JsonNode errors = root.get("errors");
+            if (errors == null || !errors.isArray()) {
+                return false;
+            }
+            for (final JsonNode error : errors) {
+                final String message = error.has("message") ? error.get("message").asText("") : "";
+                final String normalized = message.toLowerCase(Locale.ROOT);
+                if (normalized.contains("401")
+                    && (normalized.contains("token expired")
+                        || normalized.contains("expired token")
+                        || normalized.contains("jwt expired")
+                        || normalized.contains("access token expired"))) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (final IOException e) {
+            return false;
+        }
+    }
+
     @Override
     protected HttpResponse<String> sendWithRetries(
-        final Builder requestBuilder,
-        final HttpResponseHandler originHandler,
+        final HttpRequest.Builder requestBuilderWithPayload,
+        final HttpResponseHandler originHttpResponseHandler,
         final int retries
     ) {
         final HttpResponseHandler composedHandler = (response, remainingRetries, config) -> {
             final int status = response.statusCode();
-            LOGGER.info("Server replied with status code {} and body {}",
-                       status, response.body());
 
-            // If we got Unauthorized (or Forbidden) and we still have retries left,
-            // renew the access token and force AbstractHttpSender to retry by throwing IOException.
-            if ((status == 401 || status == 403) && remainingRetries > 0) {
-                ((BasicAuthHttpRequestBuilder) this.httpRequestBuilder).renewAccessToken(requestBuilder);
-                throw new IOException(status + " received: renewed access token, retrying");
+            if (remainingRetries > 0) {
+                final boolean expiredToken =
+                    status == 401
+                    || status == 403
+                    || isGraphQlExpiredTokenResponse(response);
+
+                if (expiredToken) {
+                    ((BasicAuthHttpRequestBuilder) this.httpRequestBuilder).renewAccessToken(requestBuilderWithPayload);
+                    throw new IOException("Expired access token detected, renewed token and retrying");
+                }
             }
-            // Keep existing logic (GraphQL 200 with errors[], >=400, etc.)
-            originHandler.onResponse(response, remainingRetries, config);
+            originHttpResponseHandler.onResponse(response, remainingRetries, config);
         };
-        return super.sendWithRetries(requestBuilder, composedHandler, retries);
+        return super.sendWithRetries(requestBuilderWithPayload, composedHandler, retries);
     }
 
     private static class BasicAuthHttpRequestBuilder extends DefaultHttpRequestBuilder {
@@ -145,19 +181,18 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
 
         private String buildAccessTokenAuthHeader(final String basicAuthResponseBody) throws JsonProcessingException {
             final var accessTokenResponse =
-                OBJECT_MAPPER.readValue(basicAuthResponseBody, new TypeReference<Map<String, String>>() {});
+                OBJECT_MAPPER.readValue(basicAuthResponseBody, new TypeReference<Map<String, Object>>() {});
             if (!accessTokenResponse.containsKey(ACCESS_TOKEN_FIELD)) {
                 throw new ConnectException("Couldn't find access token property "
                                            + ACCESS_TOKEN_FIELD
                                            + " in response properties: " + accessTokenResponse.keySet());
             }
-            final var tokenType = accessTokenResponse.getOrDefault("token_type", "Bearer");
-            final var accessToken = accessTokenResponse.get(ACCESS_TOKEN_FIELD);
+            final String tokenType = String.valueOf(accessTokenResponse.getOrDefault("token_type", "Bearer"));
+            final String accessToken = String.valueOf(accessTokenResponse.get(ACCESS_TOKEN_FIELD));
+            if (accessToken == null || accessToken.isBlank() || "null".equals(accessToken)) {
+                throw new ConnectException("Access token field '" + ACCESS_TOKEN_FIELD + "' is missing or blank");
+            }
             return String.format("%s %s", tokenType, accessToken);
         }
-
-        
-        
     }
-
 }
