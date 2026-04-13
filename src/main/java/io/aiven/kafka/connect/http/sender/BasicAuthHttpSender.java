@@ -50,34 +50,9 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
     }
 
     private boolean isGraphQlExpiredTokenResponse(final HttpResponse<String> response) {
-        if (response.statusCode() != 200 || !config.graphqlErrorsAsHttpError()) {
-            return false;
-        }
-        final String body = response.body();
-        if (body == null || body.isBlank()) {
-            return false;
-        }
-        try {
-            final JsonNode root = OBJECT_MAPPER.readTree(body);
-            final JsonNode errors = root.get("errors");
-            if (errors == null || !errors.isArray()) {
-                return false;
-            }
-            for (final JsonNode error : errors) {
-                final String message = error.has("message") ? error.get("message").asText("") : "";
-                final String normalized = message.toLowerCase(Locale.ROOT);
-                if (normalized.contains("401")
-                    && (normalized.contains("token expired")
-                        || normalized.contains("expired token")
-                        || normalized.contains("jwt expired")
-                        || normalized.contains("access token expired"))) {
-                    return true;
-                }
-            }
-            return false;
-        } catch (final IOException e) {
-            return false;
-        }
+        return response.statusCode() == 200
+            && config.graphqlErrorsAsHttpError()
+            && GraphQlErrorUtils.isExpiredToken(response.body());
     }
 
     @Override
