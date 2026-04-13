@@ -210,6 +210,151 @@ final class HttpSinkConfigTest {
     }
 
     @Test
+    void invalidBasicAccessTokenUrl() {
+        final var emptyAccessTokenUrlConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic",
+                "basic.access.token.url", "",
+                "basic.client.id", "client_id",
+                "basic.client.secret", "client_secret",
+                "basic.username", "user",
+                "basic.password", "password"
+        );
+
+        assertThatExceptionOfType(ConfigException.class)
+                .describedAs("Expected config exception due to empty Basic access token URL")
+                .isThrownBy(() -> new HttpSinkConfig(emptyAccessTokenUrlConfig))
+                .withMessage("Invalid value  for configuration basic.access.token.url: malformed URL");
+
+        final var wrongAccessTokenUrlConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic",
+                "basic.access.token.url", ";http://localhost:8090",
+                "basic.client.id", "client_id",
+                "basic.client.secret", "client_secret",
+                "basic.username", "user",
+                "basic.password", "password"
+        );
+
+        assertThatExceptionOfType(ConfigException.class)
+                .describedAs("Expected config exception due to malformed Basic access token URL")
+                .isThrownBy(() -> new HttpSinkConfig(wrongAccessTokenUrlConfig))
+                .withMessage("Invalid value ;http://localhost:8090 for configuration basic.access.token.url: malformed URL");
+    }
+
+    @Test
+    void invalidBasicConfiguration() {
+        final var noAccessTokenUrlConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic"
+        );
+
+        assertThatExceptionOfType(ConfigException.class)
+                .describedAs("Expected config exception due to missing Basic access token URL")
+                .isThrownBy(() -> new HttpSinkConfig(noAccessTokenUrlConfig))
+                .withMessageContaining("Must be present when http");
+        // .withMessage("Invalid value null for configuration basic.access.token.url: "
+        //                 + "Must be present when http.authorization.type = BASIC");
+
+        final var noClientIdConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic",
+                "basic.access.token.url", "http://localhost:8090/token"
+        );
+
+        assertThatExceptionOfType(ConfigException.class)
+                .describedAs("Expected config exception due to missing Basic client id")
+                .isThrownBy(() -> new HttpSinkConfig(noClientIdConfig))
+                .withMessageContaining("Must be present when http");
+                // .withMessage("Invalid value null for configuration basic.client.id: "
+                //         + "Must be present when http.authorization.type = BASIC");
+
+        final var noSecretConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic",
+                "basic.access.token.url", "http://localhost:8090/token",
+                "basic.client.id", "client_id"
+        );
+
+        assertThatExceptionOfType(ConfigException.class)
+                .describedAs("Expected config exception due to missing Basic client secret")
+                .isThrownBy(() -> new HttpSinkConfig(noSecretConfig))
+                .withMessageContaining("Must be present");
+                // .withMessage("Invalid value null for configuration basic.client.secret: "
+                //         + "Must be present when http.authorization.type = BASIC");
+
+        final var noUsernameConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic",
+                "basic.access.token.url", "http://localhost:8090/token",
+                "basic.client.id", "client_id",
+                "basic.client.secret", "client_secret"
+        );
+
+        assertThatExceptionOfType(ConfigException.class)
+                .describedAs("Expected config exception due to missing Basic username")
+                .isThrownBy(() -> new HttpSinkConfig(noUsernameConfig))
+                .withMessageContaining("Must be present when http");
+
+        final var noPasswordConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic",
+                "basic.access.token.url", "http://localhost:8090/token",
+                "basic.client.id", "client_id",
+                "basic.client.secret", "client_secret",
+                "basic.username", "user"
+        );
+
+        assertThatExceptionOfType(ConfigException.class)
+                .describedAs("Expected config exception due to missing Basic password")
+                .isThrownBy(() -> new HttpSinkConfig(noPasswordConfig))
+                .withMessageContaining("Must be present when http");
+    }
+
+    @Test
+    void validBasicMinimalConfiguration() throws URISyntaxException {
+        final var basicConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic",
+                "basic.access.token.url", "http://localhost:8090/token",
+                "basic.client.id", "client_id",
+                "basic.client.secret", "client_secret",
+                "basic.username", "user",
+                "basic.password", "password"
+        );
+
+        final var config = new HttpSinkConfig(basicConfig);
+
+        assertThat(config)
+                .returns(AuthorizationType.BASIC, from(HttpSinkConfig::authorizationType))
+                .returns(new URI("http://localhost:8090/token"), from(HttpSinkConfig::basicAuthAccessTokenUri))
+                .returns("client_id", from(HttpSinkConfig::basicAuthClientId))
+                .returns("client_secret", from(httpSinkConfig -> httpSinkConfig.basicAuthClientSecret().value()))
+                .returns("user", from(HttpSinkConfig::basicAuthUsername))
+                .returns("password", from(httpSinkConfig -> httpSinkConfig.basicAuthPassword().value()))
+                .returns(null, from(HttpSinkConfig::basicAuthClientScope));
+    }
+
+    @Test
+    void validBasicGraphQlConfiguration() {
+        final var basicConfig = Map.of(
+                "http.url", "http://localhost:8090",
+                "http.authorization.type", "basic",
+                "basic.access.token.url", "http://localhost:8090/token",
+                "basic.client.id", "client_id",
+                "basic.client.secret", "client_secret",
+                "basic.username", "user",
+                "basic.password", "password",
+                "http.graphql.errors.as.http_error", "true"
+        );
+
+        final var config = new HttpSinkConfig(basicConfig);
+
+        assertThat(config.authorizationType()).isEqualTo(AuthorizationType.BASIC);
+        assertThat(config.graphqlErrorsAsHttpError()).isTrue();
+    }
+
+    @Test
     void invalidUrl() {
         final Map<String, String> properties = Map.of(
                 "http.url", "#http://localhost:8090",
@@ -258,6 +403,16 @@ final class HttpSinkConfigTest {
                                 "http.url", "http://localhost:8090",
                                 "http.authorization.type", AuthorizationType.STATIC.name,
                                 "http.headers.authorization", "some"
+                        )),
+                Arguments.of(AuthorizationType.BASIC,
+                        Map.of(
+                                "http.url", "http://localhost:8090",
+                                "http.authorization.type", AuthorizationType.BASIC.name,
+                                "basic.access.token.url", "http://localhost:42/token",
+                                "basic.client.id", "client_id",
+                                "basic.client.secret", "client_secret",
+                                "basic.username", "user",
+                                "basic.password", "password"
                         )),
                 Arguments.of(AuthorizationType.OAUTH2,
                         Map.of(
