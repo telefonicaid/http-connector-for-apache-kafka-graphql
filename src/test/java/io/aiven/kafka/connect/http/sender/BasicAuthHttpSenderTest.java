@@ -362,6 +362,132 @@ class BasicAuthHttpSenderTest extends HttpSenderTestBase {
             .withMessageContaining("status code 500");
     }
 
+    @Test
+    void doesNotRefreshAccessTokenOnGraphQlInternalServerError() throws Exception {
+        final HttpResponse<String> mockedAccessTokenResponse = mock(HttpResponse.class);
+        when(mockedAccessTokenResponse.body()).thenReturn(ACCESS_TOKEN_RESPONSE);
+        when(basicAuthAccessTokenHttpSender.call()).thenReturn(mockedAccessTokenResponse);
+
+        final HttpResponse<String> graphQlErrorResponse = mock(HttpResponse.class);
+        when(graphQlErrorResponse.statusCode()).thenReturn(200);
+        when(graphQlErrorResponse.body()).thenReturn(
+                                                     "{\"data\":{\"updateAdvice\":null},"
+                                                     + "\"errors\":[{\"message\":\"Redis Cluster cannot be connected. "
+                                                     + "Please provide at least one reachable node: None\","
+                                                     + "\"locations\":[{\"line\":3,\"column\":17}],"
+                                                     + "\"path\":[\"updateAdvice\"]}]}"
+                                                     );
+
+        final HttpSinkConfig config = new HttpSinkConfig(defaultGraphQlConfig());
+
+        when(mockedClient.send(any(HttpRequest.class), any(BodyHandler.class))).thenReturn(graphQlErrorResponse);
+
+        assertThatExceptionOfType(ConnectException.class)
+            .isThrownBy(() -> {
+                    final var httpSender =
+                        Mockito.spy(new BasicAuthHttpSender(config, mockedClient, basicAuthAccessTokenHttpSender));
+                    httpSender.send("some message");
+                })
+            .withMessageContaining("status code 200")
+            .withMessageContaining("body with errors");
+
+        // Token requested only once: initial token retrieval, no refresh
+        verify(basicAuthAccessTokenHttpSender, times(1)).call();
+
+        // With default max.retries=1, one initial attempt + one retry
+        verify(mockedClient, times(2)).send(any(HttpRequest.class), any(BodyHandler.class));
+    }
+
+    @Test
+    void doesNotRefreshAccessTokenOnGraphQl401LikeErrorThatIsNotTokenExpired() throws Exception {
+        final HttpResponse<String> mockedAccessTokenResponse = mock(HttpResponse.class);
+        when(mockedAccessTokenResponse.body()).thenReturn(ACCESS_TOKEN_RESPONSE);
+        when(basicAuthAccessTokenHttpSender.call()).thenReturn(mockedAccessTokenResponse);
+
+        final HttpResponse<String> graphQlErrorResponse = mock(HttpResponse.class);
+        when(graphQlErrorResponse.statusCode()).thenReturn(200);
+        when(graphQlErrorResponse.body()).thenReturn(
+                                                     "{\"data\":{\"updateAdvice\":null},"
+                                                     + "\"errors\":[{\"message\":\"401: unauthorized operation for this resource\","
+                                                     + "\"locations\":[{\"line\":3,\"column\":17}],"
+                                                     + "\"path\":[\"updateAdvice\"]}]}"
+                                                     );
+
+        final HttpSinkConfig config = new HttpSinkConfig(defaultGraphQlConfig());
+
+        when(mockedClient.send(any(HttpRequest.class), any(BodyHandler.class))).thenReturn(graphQlErrorResponse);
+
+        assertThatExceptionOfType(ConnectException.class)
+            .isThrownBy(() -> {
+                    final var httpSender =
+                        Mockito.spy(new BasicAuthHttpSender(config, mockedClient, basicAuthAccessTokenHttpSender));
+                    httpSender.send("some message");
+                })
+            .withMessageContaining("status code 200")
+            .withMessageContaining("body with errors");
+
+        // Token requested only once: initial token retrieval, no refresh
+        verify(basicAuthAccessTokenHttpSender, times(1)).call();
+
+        // With default max.retries=1, one initial attempt + one retry
+        verify(mockedClient, times(2)).send(any(HttpRequest.class), any(BodyHandler.class));
+    }
+
+    @Test
+    void refreshAccessTokenOnGraphQlExpiredTokenResponseCaseInsensitive() throws Exception {
+        final HttpResponse<String> mockedAccessTokenResponse = mock(HttpResponse.class);
+        when(mockedAccessTokenResponse.body()).thenReturn(ACCESS_TOKEN_RESPONSE);
+
+        final HttpResponse<String> mockedAccessTokenResponseRefreshed = mock(HttpResponse.class);
+        when(mockedAccessTokenResponseRefreshed.body()).thenReturn(
+                                                                   "{\"access_token\": \"my_refreshed_token\",\"token_type\": \"Bearer\",\"expires_in\": 7199}");
+
+        when(basicAuthAccessTokenHttpSender.call()).thenReturn(
+                                                               mockedAccessTokenResponse, mockedAccessTokenResponseRefreshed);
+
+        final HttpResponse<String> expiredTokenGraphQlResponse = mock(HttpResponse.class);
+        when(expiredTokenGraphQlResponse.statusCode()).thenReturn(200);
+        when(expiredTokenGraphQlResponse.body()).thenReturn(
+                                                            "{\"data\":{\"updateLocation\":null},"
+                                                            + "\"errors\":[{\"message\":\"401: TOKEN EXPIRED\","
+                                                            + "\"locations\":[{\"line\":3,\"column\":17}],"
+                                                            + "\"path\":[\"updateLocation\"]}]}"
+                                                            );
+
+        final HttpResponse<String> normalResponse = mock(HttpResponse.class);
+        when(normalResponse.statusCode()).thenReturn(200);
+        when(normalResponse.body()).thenReturn("{\"data\":{\"updateLocation\":{\"id\":\"ok\"}}}");
+
+        final HttpSinkConfig config = new HttpSinkConfig(defaultGraphQlConfig());
+
+        when(mockedClient.send(any(HttpRequest.class), any(BodyHandler.class))).thenReturn(
+                                                                                           expiredTokenGraphQlResponse, normalResponse);
+
+        final var httpSender =
+            Mockito.spy(new BasicAuthHttpSender(config, mockedClient, basicAuthAccessTokenHttpSender));
+
+        httpSender.send("some message");
+
+        final ArgumentCaptor<HttpRequest> httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockedClient, times(2)).send(httpRequestCaptor.capture(), any(BodyHandler.class));
+
+        final List<HttpRequest> httpRequests = httpRequestCaptor.getAllValues();
+
+        assertThat(httpRequests).hasSize(2);
+
+        assertThat(httpRequests.get(0)
+                   .headers()
+                   .firstValue(HttpRequestBuilder.HEADER_AUTHORIZATION)
+                   .orElse(null)).isEqualTo("Bearer my_access_token");
+
+        assertThat(httpRequests.get(1)
+                   .headers()
+                   .firstValue(HttpRequestBuilder.HEADER_AUTHORIZATION)
+                   .orElse(null)).isEqualTo("Bearer my_refreshed_token");
+
+        verify(basicAuthAccessTokenHttpSender, times(2)).call();
+    }
+
     private Map<String, String> defaultConfig() {
         return Map.of(
             "http.url", "http://localhost:42",
