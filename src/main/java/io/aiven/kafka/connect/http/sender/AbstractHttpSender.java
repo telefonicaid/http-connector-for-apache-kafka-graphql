@@ -76,13 +76,15 @@ abstract class AbstractHttpSender {
                     httpResponseHandler.onResponse(response, remainingRetries, config);
                     return response;
                 } catch (final IOException e) {
-                    log.debug("Sending failed, will retry in {} ms ({} retries remain) by {}",
-                             config.retryBackoffMs(),
-                             remainingRetries,
-                             e);
                     remainingRetries -= 1;
-                    TimeUnit.MILLISECONDS.sleep(config.retryBackoffMs());
                     msgError = e.toString();
+                    if (remainingRetries >= 0) {
+                        log.debug("Sending failed, will retry in {} ms ({} retries remain) {}",
+                                  config.retryBackoffMs(),
+                                  remainingRetries,
+                                  e);
+                        TimeUnit.MILLISECONDS.sleep(config.retryBackoffMs());
+                    }
                 }
             } catch (final InterruptedException e) {
                 log.error("Sending failed due to InterruptedException, stopping", e);
