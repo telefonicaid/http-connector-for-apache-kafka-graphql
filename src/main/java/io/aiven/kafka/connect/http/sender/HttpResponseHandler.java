@@ -21,15 +21,12 @@ import java.net.http.HttpResponse;
 
 import io.aiven.kafka.connect.http.config.HttpSinkConfig;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 interface HttpResponseHandler {
 
     Logger LOGGER = LoggerFactory.getLogger(HttpResponseHandler.class);
-    final ObjectMapper MAPPER = new ObjectMapper();
 
     void onResponse(final HttpResponse<String> response,
                     int remainingRetries,
@@ -37,37 +34,25 @@ interface HttpResponseHandler {
 
     HttpResponseHandler ON_HTTP_ERROR_RESPONSE_HANDLER = (response, remainingRetries, config) -> {
         if (config.graphqlErrorsAsHttpError() && response.statusCode() == 200) {
-            // GraphQL logic: response 200 with errors[] are like 400
-            boolean isError = false;
-            final Object value = response.body();
-            if (value != null) {
-                try {
-                    JsonNode root = null;
-                    if (value instanceof String) {
-                        root = MAPPER.readTree((String) value);
-                    } else {
-                        // fallback: serialize value.toString()
-                        root = MAPPER.readTree(value.toString());
-                    }
-                    if (root.has("errors")
-                        && root.get("errors").isArray()
-                        && root.get("errors").size() > 0) {
-                        isError = true;
-                    }
-                } catch (IOException e) {
-                    // ignore parse errors, treat as non-error
-                }
-            }
-            if (isError) {
+            final GraphQlErrorUtils.ErrorDisposition errorDisposition =
+                GraphQlErrorUtils.classifyErrors(response.body());
+            if (errorDisposition == GraphQlErrorUtils.ErrorDisposition.RETRYABLE) {
                 final var request = response.request();
                 final var uri = request != null ? request.uri() : "UNKNOWN";
                 LOGGER.warn(
-                            "Got 200 HTTP status code: {} with errors in body: {}. Requested URI: {}",
-                            response.statusCode(),
+                            "Got 200 HTTP status code with retryable GraphQL errors in body: {}. Requested URI: {}",
                             response.body(),
                             uri);
                 throw new IOException("Server replied with status code " + response.statusCode()
-                                      + " and body with errors " + response.body());
+                                      + " and body with retryable GraphQL errors " + response.body());
+            }
+            if (errorDisposition == GraphQlErrorUtils.ErrorDisposition.NON_RETRYABLE_ONLY) {
+                final var request = response.request();
+                final var uri = request != null ? request.uri() : "UNKNOWN";
+                LOGGER.info(
+                    "Ignoring non-retryable GraphQL errors in HTTP 200 response body: {}. Requested URI: {}",
+                    response.body(),
+                    uri);
             }
         } else if (response.statusCode() >= 400) {
             final var request = response.request();
