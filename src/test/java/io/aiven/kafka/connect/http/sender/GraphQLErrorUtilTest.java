@@ -130,4 +130,44 @@ class GraphQlErrorUtilsTest {
     void returnsFalseForEmptyBody() {
         assertThat(GraphQlErrorUtils.isExpiredToken("")).isFalse();
     }
+
+    @Test
+    void classifiesAlreadyExistsAsNonRetryableOnly() {
+        final String body =
+            "{"
+                + "\"errors\": ["
+                + "{ \"message\": \"URI http://example/id already exists in graph\" }"
+                + "]"
+                + "}";
+
+        assertThat(GraphQlErrorUtils.classifyErrors(body))
+            .isEqualTo(GraphQlErrorUtils.ErrorDisposition.NON_RETRYABLE_ONLY);
+    }
+
+    @Test
+    void classifiesUnknownGraphQlErrorAsRetryable() {
+        final String body =
+            "{"
+                + "\"errors\": ["
+                + "{ \"message\": \"database timeout while processing mutation\" }"
+                + "]"
+                + "}";
+
+        assertThat(GraphQlErrorUtils.classifyErrors(body))
+            .isEqualTo(GraphQlErrorUtils.ErrorDisposition.RETRYABLE);
+    }
+
+    @Test
+    void classifiesMixedErrorsAsRetryable() {
+        final String body =
+            "{"
+                + "\"errors\": ["
+                + "{ \"message\": \"URI http://example/id already exists in graph\" },"
+                + "{ \"message\": \"internal server failure\" }"
+                + "]"
+                + "}";
+
+        assertThat(GraphQlErrorUtils.classifyErrors(body))
+            .isEqualTo(GraphQlErrorUtils.ErrorDisposition.RETRYABLE);
+    }
 }
