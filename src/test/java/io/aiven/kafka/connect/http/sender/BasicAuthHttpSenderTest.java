@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.http.sender;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
@@ -313,6 +314,43 @@ class BasicAuthHttpSenderTest extends HttpSenderTestBase {
             })
             .withMessageContaining("status code 401");
 
+        verify(basicAuthAccessTokenHttpSender, times(2)).call();
+    }
+
+    @Test
+    void refreshAccessTokenOnUnauthorizedResponseWithZeroRetries() throws Exception {
+        final HttpResponse<String> mockedAccessTokenResponse = mock(HttpResponse.class);
+        when(mockedAccessTokenResponse.body()).thenReturn(ACCESS_TOKEN_RESPONSE);
+
+        final HttpResponse<String> mockedAccessTokenResponseRefreshed = mock(HttpResponse.class);
+        when(mockedAccessTokenResponseRefreshed.body()).thenReturn(
+            "{\"access_token\": \"my_refreshed_token\",\"token_type\": \"Bearer\",\"expires_in\": 7199}");
+
+        when(basicAuthAccessTokenHttpSender.call()).thenReturn(
+            mockedAccessTokenResponse,
+            mockedAccessTokenResponseRefreshed
+        );
+
+        final HttpResponse<String> unauthorizedResponse = mock(HttpResponse.class);
+        when(unauthorizedResponse.statusCode()).thenReturn(401);
+
+        final HttpResponse<String> okResponse = mock(HttpResponse.class);
+        when(okResponse.statusCode()).thenReturn(200);
+        when(okResponse.body()).thenReturn("{\"data\":{\"ok\":true}}");
+
+        final var configWithNoRetries = new HashMap<>(defaultConfig());
+        configWithNoRetries.put("max.retries", "0");
+        final HttpSinkConfig config = new HttpSinkConfig(configWithNoRetries);
+
+        when(mockedClient.send(any(HttpRequest.class), any(BodyHandler.class))).thenReturn(
+            unauthorizedResponse,
+            okResponse
+        );
+
+        final var httpSender = Mockito.spy(new BasicAuthHttpSender(config, mockedClient, basicAuthAccessTokenHttpSender));
+        httpSender.send("some message");
+
+        verify(mockedClient, times(2)).send(any(HttpRequest.class), any(BodyHandler.class));
         verify(basicAuthAccessTokenHttpSender, times(2)).call();
     }
 
