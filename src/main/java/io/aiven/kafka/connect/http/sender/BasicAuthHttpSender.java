@@ -66,7 +66,6 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
 
             final boolean expiredToken =
                 status == 401
-                || status == 403
                 || isGraphQlExpiredTokenResponse(response);
 
             if (expiredToken) {
