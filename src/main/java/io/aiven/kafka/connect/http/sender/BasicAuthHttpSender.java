@@ -64,15 +64,20 @@ class BasicAuthHttpSender extends AbstractHttpSender implements HttpSender {
         final HttpResponseHandler composedHandler = (response, remainingRetries, config) -> {
             final int status = response.statusCode();
 
-            if (remainingRetries > 0) {
-                final boolean expiredToken =
-                    status == 401
-                    || status == 403
-                    || isGraphQlExpiredTokenResponse(response);
+            final boolean expiredToken =
+                status == 401
+                || isGraphQlExpiredTokenResponse(response);
 
-                if (expiredToken) {
-                    ((BasicAuthHttpRequestBuilder) this.httpRequestBuilder).renewAccessToken(requestBuilderWithPayload);
-                    throw new IOException("Expired access token detected, renewed token and retrying");
+            if (expiredToken) {
+                ((BasicAuthHttpRequestBuilder) this.httpRequestBuilder).renewAccessToken(requestBuilderWithPayload);
+                try {
+                    final var refreshedResponse =
+                        httpClient.send(requestBuilderWithPayload.build(), HttpResponse.BodyHandlers.ofString());
+                    originHttpResponseHandler.onResponse(refreshedResponse, remainingRetries, config);
+                    return;
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted while retrying after token renewal", e);
                 }
             }
             originHttpResponseHandler.onResponse(response, remainingRetries, config);

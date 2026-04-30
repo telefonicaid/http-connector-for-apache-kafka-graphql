@@ -50,12 +50,18 @@ class OAuth2HttpSender extends AbstractHttpSender implements HttpSender {
     ) {
         // This handler allows to request a new access token if a 401 occurs, meaning the session might be expired
         final HttpResponseHandler handler = (response, remainingRetries, config) -> {
-            // If the response has a 401 error and we have retries left, we attempt to renew the session
-            if (response.statusCode() == 401 && remainingRetries > 0) {
+            // If the response has a 401 error, we attempt to renew the session and resend once.
+            if (response.statusCode() == 401) {
                 // Update the request builder with the new access token
                 ((OAuth2AuthHttpRequestBuilder) this.httpRequestBuilder).renewAccessToken(requestBuilder);
-                // Retry the call and decrease the retries counter to avoid looping on token renewal
-                this.sendWithRetries(requestBuilder, originHttpResponseHandler, remainingRetries - 1);
+                try {
+                    final var refreshedResponse =
+                        httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+                    originHttpResponseHandler.onResponse(refreshedResponse, remainingRetries, config);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted while retrying after token renewal", e);
+                }
             } else {
                 originHttpResponseHandler.onResponse(response, remainingRetries, config);
             }

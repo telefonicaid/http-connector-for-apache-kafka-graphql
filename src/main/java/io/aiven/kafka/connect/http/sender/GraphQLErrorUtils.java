@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.http.sender;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Locale;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,6 +29,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 final class GraphQlErrorUtils {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String[] NON_RETRYABLE_ERROR_PATTERNS = {
+        "already exists"
+    };
+
+    enum ErrorDisposition {
+        NONE,
+        NON_RETRYABLE_ONLY,
+        RETRYABLE
+    }
 
     private GraphQlErrorUtils() {
         // Utility class
@@ -78,6 +88,40 @@ final class GraphQlErrorUtils {
         } catch (IOException e) {
             // If parsing fails, we assume it's not a GraphQL error response
             return false;
+        }
+    }
+
+    static ErrorDisposition classifyErrors(final String body) {
+        if (body == null || body.isBlank()) {
+            return ErrorDisposition.NONE;
+        }
+
+        try {
+            final JsonNode root = MAPPER.readTree(body);
+            final JsonNode errors = root.get("errors");
+
+            if (errors == null || !errors.isArray() || errors.isEmpty()) {
+                return ErrorDisposition.NONE;
+            }
+
+            for (final JsonNode error : errors) {
+                final String message = error.has("message")
+                    ? error.get("message").asText("")
+                    : error.toString();
+
+                final String normalized = message.toLowerCase(Locale.ROOT);
+                final boolean isNonRetryable = Arrays.stream(NON_RETRYABLE_ERROR_PATTERNS)
+                    .anyMatch(normalized::contains);
+
+                if (!isNonRetryable) {
+                    return ErrorDisposition.RETRYABLE;
+                }
+            }
+
+            return ErrorDisposition.NON_RETRYABLE_ONLY;
+        } catch (IOException e) {
+            // Keep previous behavior: parse failures should not trigger GraphQL error handling.
+            return ErrorDisposition.NONE;
         }
     }
 }
