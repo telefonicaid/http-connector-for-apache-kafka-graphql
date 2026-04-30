@@ -314,7 +314,8 @@ class BasicAuthHttpSenderTest extends HttpSenderTestBase {
             })
             .withMessageContaining("status code 401");
 
-        verify(basicAuthAccessTokenHttpSender, times(2)).call();
+        // First token request + one token refresh per retry attempt (max.retries=1 => 2 refreshes).
+        verify(basicAuthAccessTokenHttpSender, times(3)).call();
     }
 
     @Test
@@ -443,7 +444,7 @@ class BasicAuthHttpSenderTest extends HttpSenderTestBase {
                     httpSender.send("some message");
                 })
             .withMessageContaining("status code 200")
-            .withMessageContaining("body with errors");
+            .withMessageContaining("retryable GraphQL errors");
 
         // Token requested only once: initial token retrieval, no refresh
         verify(basicAuthAccessTokenHttpSender, times(1)).call();
@@ -478,7 +479,7 @@ class BasicAuthHttpSenderTest extends HttpSenderTestBase {
                     httpSender.send("some message");
                 })
             .withMessageContaining("status code 200")
-            .withMessageContaining("body with errors");
+            .withMessageContaining("retryable GraphQL errors");
 
         // Token requested only once: initial token retrieval, no refresh
         verify(basicAuthAccessTokenHttpSender, times(1)).call();

@@ -262,48 +262,33 @@ class OAuth2HttpSenderTest extends HttpSenderTestBase {
         final List<String> messages = List.of("some message 1", "some message 2");
         messages.forEach(httpSender::send);
 
-        // Capture the RequestBuilder
-        final ArgumentCaptor<Builder> defaultHttpRequestBuilder = ArgumentCaptor.forClass(HttpRequest.Builder.class);
-        verify(httpSender, atLeast(messages.size())).sendWithRetries(defaultHttpRequestBuilder.capture(),
-            any(HttpResponseHandler.class), anyInt());
+        final ArgumentCaptor<HttpRequest> httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockedClient, times(messages.size() + 1)).send(httpRequestCaptor.capture(), any(BodyHandler.class));
 
-        // Retrieve the builders and rebuild the HttpRequests to check the HttpRequest proper configuration
-        final List<HttpRequest> httpRequests = defaultHttpRequestBuilder
-            .getAllValues()
-            .stream()
-            .map(Builder::build)
-            .collect(Collectors.toList());
-
-        // 3 attempts were made
+        final List<HttpRequest> httpRequests = httpRequestCaptor.getAllValues();
         assertThat(httpRequests).hasSize(3);
-        IntStream
-            .range(0, httpRequests.size() - 1)
-            .boxed()
-            .forEach(httpRequestIndex -> {
-                final HttpRequest httpRequest = httpRequests.get(httpRequestIndex);
 
-                assertThat(httpRequest.uri()).isEqualTo(config.httpUri());
-                assertThat(httpRequest.timeout())
-                    .isPresent()
-                    .get(as(InstanceOfAssertFactories.DURATION))
-                    .hasSeconds(config.httpTimeout());
-                assertThat(httpRequest.method()).isEqualTo("POST");
+        httpRequests.forEach(httpRequest -> {
+            assertThat(httpRequest.uri()).isEqualTo(config.httpUri());
+            assertThat(httpRequest.timeout())
+                .isPresent()
+                .get(as(InstanceOfAssertFactories.DURATION))
+                .hasSeconds(config.httpTimeout());
+            assertThat(httpRequest.method()).isEqualTo("POST");
+        });
 
-                // First time the access token is my_access_token
-                if (httpRequestIndex == 0) {
-                    assertThat(httpRequest
-                        .headers()
-                        .firstValue(HttpRequestBuilder.HEADER_AUTHORIZATION)
-                        .orElse(null)).isEqualTo("Bearer my_access_token");
-                } else {
-                    // All other calls are with my_refreshed_token
-                    assertThat(httpRequest
-                        .headers()
-                        .firstValue(HttpRequestBuilder.HEADER_AUTHORIZATION)
-                        .orElse(null)).isEqualTo("Bearer my_refreshed_token");
-                }
-
-            });
+        assertThat(httpRequests.get(0)
+            .headers()
+            .firstValue(HttpRequestBuilder.HEADER_AUTHORIZATION)
+            .orElse(null)).isEqualTo("Bearer my_access_token");
+        assertThat(httpRequests.get(1)
+            .headers()
+            .firstValue(HttpRequestBuilder.HEADER_AUTHORIZATION)
+            .orElse(null)).isEqualTo("Bearer my_access_token");
+        assertThat(httpRequests.get(2)
+            .headers()
+            .firstValue(HttpRequestBuilder.HEADER_AUTHORIZATION)
+            .orElse(null)).isEqualTo("Bearer my_refreshed_token");
 
         // AccessToken only called 2 times on 3 attempts to send the messages
         verify(oauth2AccessTokenHttpSender, times(2)).call();
@@ -383,8 +368,8 @@ class OAuth2HttpSenderTest extends HttpSenderTestBase {
             .withMessageContaining("status code 401");
                                                                               
 
-        // Only 2 calls were made with 1 retry
-        verify(oauth2AccessTokenHttpSender, times(2)).call();
+        // First token request + one token refresh per retry attempt (max.retries=1 => 2 refreshes).
+        verify(oauth2AccessTokenHttpSender, times(3)).call();
     }
 
     @Test
