@@ -44,6 +44,8 @@ public final class HttpSinkConfig extends AbstractConfig {
     private static final String HTTP_PROXY_HOST = "http.proxy.host";
     private static final String HTTP_PROXY_PORT = "http.proxy.port";
     private static final String HTTP_SSL_TRUST_ALL_CERTIFICATES = "http.ssl.trust.all.certs";
+    private static final String HTTP_SSL_TRUSTSTORE_LOCATION = "http.ssl.truststore.location";
+    private static final String HTTP_SSL_TRUSTSTORE_PASSWORD = "http.ssl.truststore.password";
 
     private static final String HTTP_AUTHORIZATION_TYPE_CONFIG = "http.authorization.type";
     private static final String HTTP_HEADERS_AUTHORIZATION_CONFIG = "http.headers.authorization";
@@ -63,6 +65,7 @@ public final class HttpSinkConfig extends AbstractConfig {
     private static final String OAUTH2_CLIENT_AUTHORIZATION_MODE_CONFIG = "oauth2.client.authorization.mode";
     private static final String OAUTH2_CLIENT_SCOPE_CONFIG = "oauth2.client.scope";
     private static final String OAUTH2_RESPONSE_TOKEN_PROPERTY_CONFIG = "oauth2.response.token.property";
+    private static final String OAUTH2_TOKEN_RENEW_ON_STATUS_CODES_CONFIG ="oauth2.token.renew.on.status.codes";
 
     private static final String BASIC_ACCESS_TOKEN_URL_CONFIG = "basic.access.token.url";
     private static final String BASIC_CLIENT_ID_PROP_CONFIG = "basic.request.client.id.property";
@@ -161,6 +164,28 @@ public final class HttpSinkConfig extends AbstractConfig {
             groupCounter++,
             ConfigDef.Width.SHORT,
             HTTP_SSL_TRUST_ALL_CERTIFICATES
+        );
+        configDef.define(
+            HTTP_SSL_TRUSTSTORE_LOCATION,
+            Type.STRING,
+            null,
+            ConfigDef.Importance.LOW,
+            "Path to the SSL truststore file.",
+            CONNECTION_GROUP,
+            groupCounter++,
+            ConfigDef.Width.LONG,
+            HTTP_SSL_TRUSTSTORE_LOCATION
+        );
+        configDef.define(
+            HTTP_SSL_TRUSTSTORE_PASSWORD,
+            Type.PASSWORD,
+            null,
+            ConfigDef.Importance.LOW,
+            "Password for the SSL truststore.",
+            CONNECTION_GROUP,
+            groupCounter++,
+            ConfigDef.Width.MEDIUM,
+            HTTP_SSL_TRUSTSTORE_PASSWORD
         );
 
         configDef.define(
@@ -449,8 +474,6 @@ public final class HttpSinkConfig extends AbstractConfig {
                 List.of(OAUTH2_ACCESS_TOKEN_URL_CONFIG, OAUTH2_CLIENT_ID_CONFIG, OAUTH2_CLIENT_SECRET_CONFIG,
                         OAUTH2_CLIENT_AUTHORIZATION_MODE_CONFIG, OAUTH2_CLIENT_SCOPE_CONFIG)
         );
-
-
         configDef.define(
                 BASIC_ACCESS_TOKEN_URL_CONFIG,
                 ConfigDef.Type.STRING,
@@ -605,6 +628,49 @@ public final class HttpSinkConfig extends AbstractConfig {
                 BASIC_CLIENT_SCOPE_CONFIG,
                 List.of(BASIC_ACCESS_TOKEN_URL_CONFIG, BASIC_CLIENT_ID_CONFIG, BASIC_CLIENT_SECRET_CONFIG,
                         BASIC_USERNAME_CONFIG, BASIC_PASSWORD_CONFIG)
+        );
+
+        configDef.define(
+                OAUTH2_TOKEN_RENEW_ON_STATUS_CODES_CONFIG,
+                ConfigDef.Type.LIST,
+                "401",
+                new ConfigDef.Validator() {
+
+                    @Override
+                    public void ensureValid(String name, Object value) {
+                        if (value == null) {
+                            throw new ConfigException(name, null, "can't be null");
+                        }
+                        if (!(value instanceof List)) {
+                            throw new ConfigException(name, value, "must be a list");
+                        }
+                        for (Object entry : (List) value) {
+                            if (!(entry instanceof String) || !isNumber((String) entry)) {
+                                throw new ConfigException(name, value, "must be a list of numbers");
+                            }
+                        }
+                    }
+
+                    private boolean isNumber(String value) {
+                        try {
+                            Integer.parseInt(value);
+                            return true;
+                        } catch (NumberFormatException e) {
+                            return false;
+                        }
+                    }
+
+                    @Override
+                    public String toString() {
+                        return "List of HTTP status codes";
+                    }
+                },
+                ConfigDef.Importance.LOW,
+                "Comma separated list of HTTP response status codes which should trigger an access token renewal",
+                CONNECTION_GROUP,
+                groupCounter++,
+                ConfigDef.Width.LONG,
+                OAUTH2_TOKEN_RENEW_ON_STATUS_CODES_CONFIG
         );
     }
 
@@ -1044,6 +1110,10 @@ public final class HttpSinkConfig extends AbstractConfig {
 
     public final String basicAuthClientScope() {
         return getString(BASIC_CLIENT_SCOPE_CONFIG);
+
+    public final List<Integer> oauth2RenewTokenOnStatusCodes() {
+        return getList(OAUTH2_TOKEN_RENEW_ON_STATUS_CODES_CONFIG).stream().map(Integer::valueOf).collect(Collectors.toList());
+
     }
 
     public final boolean hasProxy() {
@@ -1060,6 +1130,15 @@ public final class HttpSinkConfig extends AbstractConfig {
 
     public final boolean sslTrustAllCertificates() {
         return getBoolean(HTTP_SSL_TRUST_ALL_CERTIFICATES);
+    }
+
+    public final String sslTrustStoreLocation() {
+        return getString(HTTP_SSL_TRUSTSTORE_LOCATION);
+    }
+
+    public final String sslTrustStorePassword() {
+        final Password password = getPassword(HTTP_SSL_TRUSTSTORE_PASSWORD);
+        return password != null ? password.value() : null;
     }
 
     public static void main(final String... args) {

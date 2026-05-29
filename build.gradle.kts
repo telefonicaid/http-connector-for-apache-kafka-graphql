@@ -70,11 +70,11 @@ val kafkaVersion = "2.6.3"
 val jettyVersion = "9.4.51.v20230217"
 val junit4Version = "4.13.2"
 val jsr305Version = "3.0.2"
-val log4jVersion = "2.23.1"
+val log4jVersion = "2.25.3"
 val mockitoVersion = "5.14.1"
 val servletVersion = "4.0.1"
 val slf4japiVersion = "1.7.36"
-val spotbugsAnnotationsVersion = "4.8.6"
+val spotbugsAnnotationsVersion = "4.9.8"
 val testcontainersVersion = "1.20.4"
 val assertjVersion = "3.27.3"
 val awaitilityVersion = "4.2.2"
@@ -135,6 +135,8 @@ dependencies {
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.mockito:mockito-junit-jupiter:$mockitoVersion")
     testImplementation("org.assertj:assertj-core:$assertjVersion")
+    testImplementation("org.bouncycastle:bcprov-jdk15on:1.70")
+    testImplementation("org.bouncycastle:bcpkix-jdk15on:1.70")
 
     integrationTestRuntimeOnly("io.confluent:kafka-avro-serializer:$confluentPlatformVersion")
     integrationTestRuntimeOnly("io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion")

@@ -43,6 +43,37 @@ Connection
   * Valid Values: Key value pair string list with format header:value
   * Importance: low
 
+``http.ssl.trust.all.certs``
+  Disable hostname verification. Not recommended for production environments.
+
+  * Type: boolean
+  * Default: false
+  * Importance: low
+
+``http.ssl.truststore.location``
+  Path to the SSL truststore file. Only JKS (Java KeyStore) format is supported.
+  
+  The truststore file can be located in the following ways (searched in order):
+  
+  1. **Class-based resource loading**: File bundled within the connector JAR
+  2. **Context classloader resource loading**: File accessible via the broader classpath (including Kafka Connect plugin directory)
+  3. **File system path**: 
+     
+     - **Absolute path**: Direct file system path (e.g., ``/path/to/truststore.jks``)
+     - **Relative path**: Path relative to the connector JAR's parent directory
+
+  * Type: string
+  * Default: null
+  * Valid Values: Path to JKS truststore file
+  * Importance: low
+
+``http.ssl.truststore.password``
+  Password for the SSL truststore. Required when truststore location is specified.
+
+  * Type: password
+  * Default: null
+  * Importance: low
+
 ``oauth2.access.token.url``
   The URL to be used for fetching an access token. Client Credentials is the only supported grant type.
 
