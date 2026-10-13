@@ -50,6 +50,7 @@ final class GraphQlErrorUtils {
      * - "401: Token expired"
      * - "jwt expired"
      * - "access token expired"
+     * - "401: Token caducado" / "401: Token expirado"
      *
      * @param body GraphQL response body
      * @return true if an expired token is detected, false otherwise
@@ -78,7 +79,9 @@ final class GraphQlErrorUtils {
                     && (normalized.contains("token expired")
                         || normalized.contains("expired token")
                         || normalized.contains("jwt expired")
-                        || normalized.contains("access token expired"))) {
+                        || normalized.contains("access token expired")
+                        || normalized.contains("token caducado")
+                        || normalized.contains("token expirado"))) {
                     return true;
                 }
             }

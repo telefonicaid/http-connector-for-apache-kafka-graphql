@@ -71,6 +71,19 @@ class GraphQlErrorUtilsTest {
     }
 
     @Test
+    void detectsSpanishExpiredToken() {
+        final String body =
+            "{"
+                + "\"data\": {\"createLocation\": null},"
+                + "\"errors\": ["
+                + "{ \"message\": \"401: Token caducado\", \"path\": [\"createLocation\"] }"
+                + "]"
+                + "}";
+
+        assertThat(GraphQlErrorUtils.isExpiredToken(body)).isTrue();
+    }
+
+    @Test
     void doesNotDetectOtherErrors() {
         final String body =
             "{"
