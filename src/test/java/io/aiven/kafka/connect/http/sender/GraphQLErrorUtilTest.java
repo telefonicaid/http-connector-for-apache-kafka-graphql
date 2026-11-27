@@ -145,6 +145,28 @@ class GraphQlErrorUtilsTest {
     }
 
     @Test
+    void classifiesSpanishAlreadyExistsAsNonRetryableOnly() {
+        final String body =
+            "{\"errors\":[{\"message\":\"La URI http://datos.segittur.es/alcobendas/resource/"
+                + "bookingchannel-004 ya existe en el grafo: indica un external_id distinto.\"}]}";
+
+        assertThat(GraphQlErrorUtils.classifyErrors(body))
+            .isEqualTo(GraphQlErrorUtils.ErrorDisposition.NON_RETRYABLE_ONLY);
+        assertThat(GraphQlErrorUtils.classifyErrors("{\"errors\":[{\"message\":\"YA EXISTE\"}]}"))
+            .isEqualTo(GraphQlErrorUtils.ErrorDisposition.NON_RETRYABLE_ONLY);
+    }
+
+    @Test
+    void classifiesMixedSpanishAlreadyExistsAndOtherErrorsAsRetryable() {
+        final String body =
+            "{\"errors\":[{\"message\":\"La URI ya existe en el grafo\"},"
+                + "{\"message\":\"internal server failure\"}]}";
+
+        assertThat(GraphQlErrorUtils.classifyErrors(body))
+            .isEqualTo(GraphQlErrorUtils.ErrorDisposition.RETRYABLE);
+    }
+
+    @Test
     void classifiesUnknownGraphQlErrorAsRetryable() {
         final String body =
             "{"
@@ -152,6 +174,16 @@ class GraphQlErrorUtilsTest {
                 + "{ \"message\": \"database timeout while processing mutation\" }"
                 + "]"
                 + "}";
+
+        assertThat(GraphQlErrorUtils.classifyErrors(body))
+            .isEqualTo(GraphQlErrorUtils.ErrorDisposition.RETRYABLE);
+    }
+
+    @Test
+    void classifiesGraphQl403AsRetryable() {
+        final String body =
+            "{\"data\":{\"deleteData\":null},"
+                + "\"errors\":[{\"message\":\"403: Acceso denegado al DTI 'grafo'\"}]}";
 
         assertThat(GraphQlErrorUtils.classifyErrors(body))
             .isEqualTo(GraphQlErrorUtils.ErrorDisposition.RETRYABLE);

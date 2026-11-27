@@ -254,7 +254,8 @@ public final class HttpSinkConfig extends AbstractConfig {
                 ConfigDef.Type.BOOLEAN,
                 true,
                 ConfigDef.Importance.LOW,
-                "If true, treat HTTP 200 responses containing a non-empty GraphQL 'errors' array as failures.",
+                "If true, treat HTTP 200 responses containing GraphQL errors as failures, "
+                        + "except when all errors contain 'already exists' or 'ya existe'.",
                 ERRORS_GROUP,
                 groupCounter++,
                 ConfigDef.Width.SHORT,
