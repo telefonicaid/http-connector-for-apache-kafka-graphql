@@ -307,6 +307,10 @@ Errors Handling
 
 ``http.graphql.errors.as.http_error``
   If true, treat HTTP 200 responses containing a non-empty GraphQL 'errors' array as failures.
+  If every error message contains ``already exists`` or ``ya existe`` (case-insensitive),
+  the response is logged at INFO and treated as successful, so the record is not sent to the DLQ.
+  If any error does not match these patterns, the response is retried according to ``max.retries``.
+
   * Type: boolean
   * Default: true
   * Importance: low

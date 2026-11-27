@@ -184,6 +184,20 @@ public class DefaultHttpSenderTest extends HttpSenderTestBase {
             .withMessageContaining("status code 500");
     }
 
+    @Test
+    void doesNotRetrySpanishAlreadyExistsGraphQlError() throws Exception {
+        final HttpResponse<String> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(200);
+        when(response.body()).thenReturn(
+            "{\"errors\":[{\"message\":\"La URI ya existe en el grafo: indica un external_id distinto.\"}]}");
+        when(mockedClient.send(any(HttpRequest.class), any(BodyHandler.class))).thenReturn(response);
+
+        final var httpSender = new DefaultHttpSender(new HttpSinkConfig(defaultConfig()), mockedClient);
+
+        assertThat(httpSender.send("some message")).isSameAs(response);
+        verify(mockedClient).send(any(HttpRequest.class), any(BodyHandler.class));
+    }
+
     private Map<String, String> defaultConfig() {
         return Map.of("http.url", "http://localhost:42", "http.authorization.type", "none");
     }

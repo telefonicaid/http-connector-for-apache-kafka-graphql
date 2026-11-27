@@ -30,7 +30,8 @@ final class GraphQlErrorUtils {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String[] NON_RETRYABLE_ERROR_PATTERNS = {
-        "already exists"
+        "already exists",
+        "ya existe"
     };
 
     enum ErrorDisposition {
